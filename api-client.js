@@ -100,6 +100,13 @@ class ApiClient {
         return this._fetch(`/api/v1/auth/users/${userId}`, { method: 'DELETE' });
     }
 
+    async setTempPassword(userId, password) {
+        return this._fetch(`/api/v1/auth/users/${userId}/temp-password`, {
+            method: 'POST',
+            body: JSON.stringify({ password }),
+        });
+    }
+
     // ── Admin: Invite Codes ───────────────────────────────────
 
     async createInviteCode(expiresAt = null) {

@@ -250,6 +250,40 @@
       border-radius: 3px;
     }
 
+    /* ── Modal ────────────────────────────────────────── */
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.visible { display: flex; }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 32px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    .modal-box h2 {
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+
+    .modal-box p {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 16px;
+    }
+
     /* ── Hidden ───────────────────────────────────────── */
 
     .hidden { display: none !important; }
@@ -409,6 +443,30 @@
 
 </div>
 
+<!-- Force password change modal -->
+<div class="modal-overlay" id="pwChangeModal">
+  <div class="modal-box">
+    <h2>Password change required</h2>
+    <p>You have a temporary password. Please set a new password to continue.</p>
+    <div id="pwChangeMsg"></div>
+    <form onsubmit="forceChangePassword(event)">
+      <div class="form-group">
+        <label for="forceCurPw">Current password</label>
+        <input type="password" id="forceCurPw" required autocomplete="current-password" />
+      </div>
+      <div class="form-group">
+        <label for="forceNewPw">New password</label>
+        <input type="password" id="forceNewPw" required autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label for="forceConfirmPw">Confirm new password</label>
+        <input type="password" id="forceConfirmPw" required autocomplete="new-password" />
+      </div>
+      <button type="submit">Set new password</button>
+    </form>
+  </div>
+</div>
+
 <script src="api-client.js"></script>
 <script>
 // ── State ───────────────────────────────────────────
@@ -469,6 +527,12 @@ async function bootstrap() {
     } catch {
         api.logout();
         showLogin();
+        return;
+    }
+
+    // Force password change if required
+    if (currentUser.must_change_password) {
+        document.getElementById('pwChangeModal').classList.add('visible');
         return;
     }
 
@@ -647,7 +711,8 @@ function renderUsers() {
                 <td>${isEditing
                     ? `<button class="btn-small" onclick="saveRole('${u.id}')">Save</button>
                        <button class="btn-secondary btn-small" onclick="cancelEditRole()">Cancel</button>`
-                    : `<button class="btn-secondary btn-small" onclick="editRole('${u.id}')">Edit</button>`}</td>
+                    : `<button class="btn-secondary btn-small" onclick="editRole('${u.id}')">Edit</button>
+                       <button class="btn-secondary btn-small" onclick="promptTempPassword('${u.id}', '${esc(u.name).replace(/'/g, "\\'")}')">Set password</button>`}</td>
             </tr>
         `;
     }).join('');
@@ -719,6 +784,51 @@ async function createInvite() {
         loadInvites();
     } catch (err) {
         showMsg('invitesMsg', err.message, 'error');
+    }
+}
+
+// ── Force password change ───────────────────────────
+
+async function forceChangePassword(e) {
+    e.preventDefault();
+    clearMsg('pwChangeMsg');
+    const cur = document.getElementById('forceCurPw').value;
+    const pw = document.getElementById('forceNewPw').value;
+    const confirm = document.getElementById('forceConfirmPw').value;
+    if (pw !== confirm) {
+        showMsg('pwChangeMsg', 'New passwords do not match.', 'error');
+        return;
+    }
+    try {
+        await api.changePassword(cur, pw);
+        document.getElementById('pwChangeModal').classList.remove('visible');
+        currentUser.must_change_password = false;
+        document.getElementById('loginView').classList.add('hidden');
+        document.getElementById('appView').classList.remove('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
+        document.getElementById('navAccount').classList.remove('hidden');
+        document.getElementById('navUser').textContent = currentUser.name;
+        const isAdmin = currentUser.role === 'admin';
+        document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
+        document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
+        populateProfile();
+        route();
+    } catch (err) {
+        showMsg('pwChangeMsg', err.message, 'error');
+    }
+}
+
+// ── Temp password (admin) ──────────────────────────
+
+async function promptTempPassword(userId, userName) {
+    const pw = prompt(`Set temporary password for ${userName}:`);
+    if (!pw) return;
+    clearMsg('usersMsg');
+    try {
+        await api.setTempPassword(userId, pw);
+        showMsg('usersMsg', `Temporary password set for ${userName}. They will be required to change it on next login.`, 'success');
+    } catch (err) {
+        showMsg('usersMsg', err.message, 'error');
     }
 }
 
