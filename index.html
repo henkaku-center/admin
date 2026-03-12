@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Account - Henkaku Registry</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #111;
+      background: #fafafa;
+    }
+
+    /* ── Nav ─────────────────────────────────────────── */
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+    }
+
+    nav .brand {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #111;
+      text-decoration: none;
+    }
+
+    nav .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    nav .nav-links a {
+      color: #555;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    nav .nav-links a:hover { color: #111; }
+    nav .nav-links a.active { color: #111; font-weight: 600; }
+
+    nav .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    /* ── Layout ──────────────────────────────────────── */
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    /* ── Login form ──────────────────────────────────── */
+
+    .login-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 56px);
+    }
+
+    .login-box {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-box h2 {
+      margin-bottom: 24px;
+      font-size: 1.3rem;
+    }
+
+    /* ── Forms ───────────────────────────────────────── */
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 4px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #666;
+    }
+
+    .form-group input:read-only {
+      background: #f5f5f5;
+      color: #888;
+    }
+
+    button, .btn {
+      display: inline-block;
+      padding: 8px 20px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    button:hover, .btn:hover { background: #333; }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: #111;
+      border: 1px solid #ccc;
+    }
+
+    .btn-secondary:hover { background: #f5f5f5; }
+
+    .btn-danger {
+      background: #d32f2f;
+    }
+
+    .btn-danger:hover { background: #b71c1c; }
+
+    .btn-small {
+      padding: 4px 12px;
+      font-size: 0.8rem;
+    }
+
+    /* ── Cards / Sections ────────────────────────────── */
+
+    .section {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .section h3 {
+      font-size: 0.95rem;
+      margin: 20px 0 12px 0;
+      color: #444;
+    }
+
+    /* ── Messages ────────────────────────────────────── */
+
+    .msg {
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+
+    .msg-success { background: #e8f5e9; color: #2e7d32; }
+    .msg-error { background: #ffebee; color: #c62828; }
+
+    /* ── Tables (admin) ──────────────────────────────── */
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      font-weight: 600;
+      color: #444;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tr:hover td { background: #fafafa; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #e8eaf6;
+      color: #3949ab;
+    }
+
+    .badge-admin { background: #fce4ec; color: #c62828; }
+
+    .mono {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem;
+    }
+
+    /* ── Hidden ───────────────────────────────────────── */
+
+    .hidden { display: none !important; }
+
+    /* ── Responsive ───────────────────────────────────── */
+
+    @media (max-width: 600px) {
+      nav { padding: 0 16px; }
+      .container { padding: 0 16px; margin: 24px auto; }
+      .login-box { padding: 24px; }
+      .section { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ────────────────────────────────────────────────────
+     NAV
+     ──────────────────────────────────────────────────── -->
+
+<nav>
+  <a class="brand" href="#">Registry</a>
+  <div class="nav-links" id="navLinks">
+    <a href="#account" id="navAccount" class="active hidden">Account</a>
+    <a href="#users" id="navUsers" class="hidden">Users</a>
+    <a href="#invites" id="navInvites" class="hidden">Invites</a>
+  </div>
+  <div class="nav-right">
+    <span id="navUser"></span>
+    <button class="btn-secondary btn-small hidden" id="logoutBtn" onclick="doLogout()">Log out</button>
+  </div>
+</nav>
+
+
+<!-- ────────────────────────────────────────────────────
+     LOGIN
+     ──────────────────────────────────────────────────── -->
+
+<div id="loginView" class="login-wrapper">
+  <div class="login-box">
+    <h2>Sign in</h2>
+    <div id="loginMsg"></div>
+    <form onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password" />
+      </div>
+      <button type="submit" id="loginBtn">Sign in</button>
+    </form>
+  </div>
+</div>
+
+
+<!-- ────────────────────────────────────────────────────
+     APP (shown after login)
+     ──────────────────────────────────────────────────── -->
+
+<div id="appView" class="hidden">
+
+  <!-- Account page -->
+  <div id="pageAccount" class="container">
+    <div class="section">
+      <h2>Profile</h2>
+      <div id="profileMsg"></div>
+      <form onsubmit="saveProfile(event)">
+        <div class="form-group">
+          <label for="profileName">Name</label>
+          <input type="text" id="profileName" required />
+        </div>
+        <div class="form-group">
+          <label for="profileEmail">Email</label>
+          <input type="email" id="profileEmail" required />
+        </div>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="profileId" readonly />
+        </div>
+        <div class="form-group">
+          <label>Member since</label>
+          <input type="text" id="profileCreated" readonly />
+        </div>
+        <button type="submit">Save changes</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <h2>Change password</h2>
+      <div id="passwordMsg"></div>
+      <form onsubmit="changePassword(event)">
+        <div class="form-group">
+          <label for="currentPw">Current password</label>
+          <input type="password" id="currentPw" required autocomplete="current-password" />
+        </div>
+        <div class="form-group">
+          <label for="newPw">New password</label>
+          <input type="password" id="newPw" required autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label for="confirmPw">Confirm new password</label>
+          <input type="password" id="confirmPw" required autocomplete="new-password" />
+        </div>
+        <button type="submit">Update password</button>
+      </form>
+    </div>
+
+    <div class="section" id="accountRolesSection">
+      <h2>Roles &amp; access</h2>
+      <div id="accountRoles"></div>
+    </div>
+  </div>
+
+  <!-- Users page (admin only) -->
+  <div id="pageUsers" class="container hidden">
+    <div class="section">
+      <h2>All users</h2>
+      <div id="usersMsg"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Invites page (admin only) -->
+  <div id="pageInvites" class="container hidden">
+    <div class="section">
+      <h2>Invite codes</h2>
+      <div id="invitesMsg"></div>
+      <div style="margin-bottom: 16px;">
+        <button onclick="createInvite()">Generate invite code</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Created</th>
+            <th>Status</th>
+            <th>Used by</th>
+          </tr>
+        </thead>
+        <tbody id="invitesTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="api-client.js"></script>
+<script>
+// ── State ───────────────────────────────────────────
+
+const API_BASE = 'https://registry.henkaku.center';
+
+const api = new ApiClient(API_BASE);
+let currentUser = null;
+
+// ── Init ────────────────────────────────────────────
+
+api.init();
+if (api.isAuthenticated) {
+    bootstrap();
+} else {
+    showLogin();
+}
+
+window.addEventListener('hashchange', route);
+
+// ── Auth ────────────────────────────────────────────
+
+function showLogin() {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('appView').classList.add('hidden');
+    document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('navAccount').classList.add('hidden');
+    document.getElementById('navUser').textContent = '';
+}
+
+async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    clearMsg('loginMsg');
+    try {
+        await api.login(
+            document.getElementById('loginEmail').value,
+            document.getElementById('loginPassword').value,
+        );
+        await bootstrap();
+    } catch (err) {
+        showMsg('loginMsg', err.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function doLogout() {
+    api.logout();
+    currentUser = null;
+    showLogin();
+}
+
+async function bootstrap() {
+    try {
+        currentUser = await api.me();
+    } catch {
+        api.logout();
+        showLogin();
+        return;
+    }
+
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+    document.getElementById('logoutBtn').classList.remove('hidden');
+    document.getElementById('navAccount').classList.remove('hidden');
+    document.getElementById('navUser').textContent = currentUser.name;
+
+    const isAdmin = currentUser.roles.some(r => r.role === 'admin');
+    document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
+
+    populateProfile();
+    route();
+}
+
+// ── Routing ─────────────────────────────────────────
+
+function route() {
+    const hash = location.hash.replace('#', '') || 'account';
+    const pages = ['pageAccount', 'pageUsers', 'pageInvites'];
+    pages.forEach(p => document.getElementById(p).classList.add('hidden'));
+
+    document.querySelectorAll('#navLinks a').forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + hash);
+    });
+
+    const isAdmin = currentUser && currentUser.roles.some(r => r.role === 'admin');
+
+    switch (hash) {
+        case 'users':
+            if (isAdmin) {
+                document.getElementById('pageUsers').classList.remove('hidden');
+                loadUsers();
+            } else {
+                location.hash = '#account';
+            }
+            break;
+        case 'invites':
+            if (isAdmin) {
+                document.getElementById('pageInvites').classList.remove('hidden');
+                loadInvites();
+            } else {
+                location.hash = '#account';
+            }
+            break;
+        default:
+            document.getElementById('pageAccount').classList.remove('hidden');
+            break;
+    }
+}
+
+// ── Profile ─────────────────────────────────────────
+
+function populateProfile() {
+    document.getElementById('profileName').value = currentUser.name;
+    document.getElementById('profileEmail').value = currentUser.email;
+    document.getElementById('profileId').value = currentUser.id;
+    document.getElementById('profileCreated').value = new Date(currentUser.created_at).toLocaleDateString();
+
+    // Roles display
+    const rolesEl = document.getElementById('accountRoles');
+    const parts = [];
+
+    if (currentUser.roles.length) {
+        parts.push('<h3>Project roles</h3>');
+        parts.push(currentUser.roles.map(r =>
+            `<span class="badge ${r.role === 'admin' ? 'badge-admin' : ''}">${r.project}: ${r.role}</span> `
+        ).join(''));
+    }
+
+    if (currentUser.stakeholder_types.length) {
+        parts.push('<h3>Governance</h3>');
+        parts.push(currentUser.stakeholder_types.map(t =>
+            `<span class="badge">${t}</span> `
+        ).join(''));
+        parts.push(`<div style="margin-top:8px;font-size:0.85rem;color:#666;">Voting weight: ${currentUser.weight}</div>`);
+    }
+
+    if (!parts.length) {
+        parts.push('<p style="color:#888;font-size:0.9rem;">No roles assigned.</p>');
+    }
+
+    rolesEl.innerHTML = parts.join('');
+}
+
+async function saveProfile(e) {
+    e.preventDefault();
+    clearMsg('profileMsg');
+    const data = {};
+    const newName = document.getElementById('profileName').value.trim();
+    const newEmail = document.getElementById('profileEmail').value.trim();
+    if (newName !== currentUser.name) data.name = newName;
+    if (newEmail !== currentUser.email) data.email = newEmail;
+    if (!Object.keys(data).length) {
+        showMsg('profileMsg', 'No changes to save.', 'error');
+        return;
+    }
+    try {
+        currentUser = await api.updateProfile(data);
+        document.getElementById('navUser').textContent = currentUser.name;
+        populateProfile();
+        showMsg('profileMsg', 'Profile updated.', 'success');
+    } catch (err) {
+        showMsg('profileMsg', err.message, 'error');
+    }
+}
+
+async function changePassword(e) {
+    e.preventDefault();
+    clearMsg('passwordMsg');
+    const cur = document.getElementById('currentPw').value;
+    const pw = document.getElementById('newPw').value;
+    const confirm = document.getElementById('confirmPw').value;
+    if (pw !== confirm) {
+        showMsg('passwordMsg', 'New passwords do not match.', 'error');
+        return;
+    }
+    try {
+        await api.changePassword(cur, pw);
+        showMsg('passwordMsg', 'Password updated.', 'success');
+        document.getElementById('currentPw').value = '';
+        document.getElementById('newPw').value = '';
+        document.getElementById('confirmPw').value = '';
+    } catch (err) {
+        showMsg('passwordMsg', err.message, 'error');
+    }
+}
+
+// ── Users (admin) ───────────────────────────────────
+
+let allUsers = [];
+
+async function loadUsers() {
+    try {
+        allUsers = await api.getUsers();
+        renderUsers();
+    } catch (err) {
+        showMsg('usersMsg', err.message, 'error');
+    }
+}
+
+function renderUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = allUsers.map(u => `
+        <tr>
+            <td>${esc(u.name)}</td>
+            <td class="mono">${esc(u.email)}</td>
+            <td>${u.roles.map(r =>
+                `<span class="badge ${r.role === 'admin' ? 'badge-admin' : ''}">${r.project}: ${r.role}</span> `
+            ).join('') || '<span style="color:#aaa">none</span>'}</td>
+            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
+}
+
+// ── Invites (admin) ─────────────────────────────────
+
+async function loadInvites() {
+    try {
+        const codes = await api.getInviteCodes();
+        renderInvites(codes);
+    } catch (err) {
+        showMsg('invitesMsg', err.message, 'error');
+    }
+}
+
+function renderInvites(codes) {
+    const tbody = document.getElementById('invitesTableBody');
+    tbody.innerHTML = codes.map(c => {
+        const used = !!c.used_by;
+        const expired = c.expires_at && new Date(c.expires_at) < new Date();
+        let status = '<span class="badge" style="background:#e8f5e9;color:#2e7d32;">available</span>';
+        if (used) status = '<span class="badge" style="background:#e0e0e0;color:#666;">used</span>';
+        else if (expired) status = '<span class="badge" style="background:#fff3e0;color:#e65100;">expired</span>';
+        return `
+            <tr>
+                <td class="mono">${esc(c.code)}</td>
+                <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                <td>${status}</td>
+                <td>${c.used_by ? esc(c.used_by) : ''}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function createInvite() {
+    clearMsg('invitesMsg');
+    try {
+        const code = await api.createInviteCode();
+        showMsg('invitesMsg', `Invite code created: ${code.code}`, 'success');
+        loadInvites();
+    } catch (err) {
+        showMsg('invitesMsg', err.message, 'error');
+    }
+}
+
+// ── Helpers ─────────────────────────────────────────
+
+function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.className = `msg msg-${type}`;
+    el.textContent = text;
+}
+
+function clearMsg(id) {
+    const el = document.getElementById(id);
+    el.className = '';
+    el.textContent = '';
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+</script>
+</body>
+</html>
