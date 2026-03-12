@@ -238,6 +238,16 @@
       font-size: 0.8rem;
     }
 
+    /* ── Role editor ─────────────────────────────────── */
+
+    .role-editor select {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+
     /* ── Hidden ───────────────────────────────────────── */
 
     .hidden { display: none !important; }
@@ -363,8 +373,9 @@
           <tr>
             <th>Name</th>
             <th>Email</th>
-            <th>Roles</th>
+            <th>Role</th>
             <th>Created</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="usersTableBody"></tbody>
@@ -465,7 +476,7 @@ async function bootstrap() {
     document.getElementById('navAccount').classList.remove('hidden');
     document.getElementById('navUser').textContent = currentUser.name;
 
-    const isAdmin = currentUser.roles.some(r => r.role === 'admin');
+    const isAdmin = currentUser.role === 'admin';
     document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
     document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
 
@@ -484,7 +495,7 @@ function route() {
         a.classList.toggle('active', a.getAttribute('href') === '#' + hash);
     });
 
-    const isAdmin = currentUser && currentUser.roles.some(r => r.role === 'admin');
+    const isAdmin = currentUser && currentUser.role === 'admin';
 
     switch (hash) {
         case 'users':
@@ -520,13 +531,10 @@ function populateProfile() {
     // Roles display
     const rolesEl = document.getElementById('accountRoles');
     const parts = [];
+    const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
 
-    if (currentUser.roles.length) {
-        parts.push('<h3>Project roles</h3>');
-        parts.push(currentUser.roles.map(r =>
-            `<span class="badge ${r.role === 'admin' ? 'badge-admin' : ''}">${r.project}: ${r.role}</span> `
-        ).join(''));
-    }
+    parts.push(`<h3>Role</h3>`);
+    parts.push(`<span class="badge ${roleBadgeClass(currentUser.role)}">${roleLabel}</span>`);
 
     if (currentUser.stakeholder_types.length) {
         parts.push('<h3>Governance</h3>');
@@ -534,10 +542,6 @@ function populateProfile() {
             `<span class="badge">${t}</span> `
         ).join(''));
         parts.push(`<div style="margin-top:8px;font-size:0.85rem;color:#666;">Voting weight: ${currentUser.weight}</div>`);
-    }
-
-    if (!parts.length) {
-        parts.push('<p style="color:#888;font-size:0.9rem;">No roles assigned.</p>');
     }
 
     rolesEl.innerHTML = parts.join('');
@@ -599,18 +603,80 @@ async function loadUsers() {
     }
 }
 
+const ROLE_HIERARCHY = [
+    { value: 'public_view', label: 'Public View' },
+    { value: 'full_view', label: 'Full View' },
+    { value: 'local_content_manager', label: 'Local Content Manager' },
+    { value: 'global_content_manager', label: 'Global Content Manager' },
+    { value: 'admin', label: 'Admin' },
+];
+
+const ROLE_LABELS = Object.fromEntries(ROLE_HIERARCHY.map(r => [r.value, r.label]));
+
+let editingUserId = null;
+
+function roleBadgeClass(role) {
+    if (role === 'admin') return 'badge-admin';
+    return '';
+}
+
 function renderUsers() {
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = allUsers.map(u => `
-        <tr>
-            <td>${esc(u.name)}</td>
-            <td class="mono">${esc(u.email)}</td>
-            <td>${u.roles.map(r =>
-                `<span class="badge ${r.role === 'admin' ? 'badge-admin' : ''}">${r.project}: ${r.role}</span> `
-            ).join('') || '<span style="color:#aaa">none</span>'}</td>
-            <td>${new Date(u.created_at).toLocaleDateString()}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = allUsers.map(u => {
+        const isEditing = editingUserId === u.id;
+        const label = ROLE_LABELS[u.role] || u.role;
+
+        const roleDisplay = `<span class="badge ${roleBadgeClass(u.role)}">${label}</span>`;
+
+        const roleEditor = `<div class="role-editor">
+            <select id="roleSelect-${u.id}">
+                ${ROLE_HIERARCHY.map(r =>
+                    `<option value="${r.value}"${r.value === u.role ? ' selected' : ''}>${r.label}</option>`
+                ).join('')}
+            </select>
+        </div>`;
+
+        return `
+            <tr>
+                <td>${esc(u.name)}</td>
+                <td class="mono">${esc(u.email)}</td>
+                <td>${isEditing ? roleEditor : roleDisplay}</td>
+                <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                <td>${isEditing
+                    ? `<button class="btn-small" onclick="saveRole('${u.id}')">Save</button>
+                       <button class="btn-secondary btn-small" onclick="cancelEditRole()">Cancel</button>`
+                    : `<button class="btn-secondary btn-small" onclick="editRole('${u.id}')">Edit</button>`}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function editRole(userId) {
+    editingUserId = userId;
+    renderUsers();
+}
+
+function cancelEditRole() {
+    editingUserId = null;
+    renderUsers();
+}
+
+async function saveRole(userId) {
+    const select = document.getElementById(`roleSelect-${userId}`);
+    clearMsg('usersMsg');
+    try {
+        await api.updateUserRole(userId, select.value);
+        editingUserId = null;
+        allUsers = await api.getUsers();
+        if (userId === currentUser.id) {
+            currentUser = await api.me();
+            populateProfile();
+        }
+        renderUsers();
+        showMsg('usersMsg', 'Role updated.', 'success');
+    } catch (err) {
+        showMsg('usersMsg', err.message, 'error');
+    }
 }
 
 // ── Invites (admin) ─────────────────────────────────

@@ -89,10 +89,10 @@ class ApiClient {
         });
     }
 
-    async updateUserRoles(userId, roles) {
-        return this._fetch(`/api/v1/auth/users/${userId}/roles`, {
+    async updateUserRole(userId, role) {
+        return this._fetch(`/api/v1/auth/users/${userId}/role`, {
             method: 'PUT',
-            body: JSON.stringify({ roles }),
+            body: JSON.stringify({ role }),
         });
     }
 
