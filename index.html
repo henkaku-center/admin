@@ -699,8 +699,10 @@ function populateProfile() {
     const entityLinkDiv = document.getElementById('profileEntityLink');
     if (currentUser.compass_entity_id) {
         const anchor = document.getElementById('profileEntityAnchor');
-        anchor.href = `https://compass.henkaku.center/#${currentUser.compass_entity_id}`;
-        anchor.textContent = currentUser.compass_entity_id;
+        const eid = currentUser.compass_entity_id;
+        const compassHash = eid.startsWith('person_') ? 'people/' + eid.slice(7) : eid;
+        anchor.href = `https://compass.henkaku.center/#${compassHash}`;
+        anchor.textContent = eid;
         entityLinkDiv.style.display = '';
     } else {
         entityLinkDiv.style.display = 'none';
@@ -871,8 +873,11 @@ function renderUsers() {
                   ].filter(Boolean).join(' ')
                 : '<span style="font-size:0.8rem;color:#888;">no preferences</span>');
 
+        const userCompassHash = u.compass_entity_id && u.compass_entity_id.startsWith('person_')
+            ? 'people/' + u.compass_entity_id.slice(7)
+            : u.compass_entity_id || '';
         const nameHtml = u.compass_entity_id
-            ? `<a href="https://compass.henkaku.center/#${esc(u.compass_entity_id)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted;text-underline-offset:2px;">${esc(u.name)}</a>`
+            ? `<a href="https://compass.henkaku.center/#${esc(userCompassHash)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted;text-underline-offset:2px;">${esc(u.name)}</a>`
             : esc(u.name);
 
         return `
