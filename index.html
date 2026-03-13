@@ -238,6 +238,11 @@
     }
 
     .badge-admin { background: #fce4ec; color: #c62828; }
+    .badge-post { background: #e8f5e9; color: #2e7d32; }
+    .badge-put, .badge-patch { background: #e8eaf6; color: #3949ab; }
+    .badge-delete { background: #fce4ec; color: #c62828; }
+    .detail-toggle { cursor:pointer; color:#3949ab; font-size:0.8rem; text-decoration:underline; }
+    .detail-pre { margin-top:8px; background:#f5f5f5; padding:8px; border-radius:4px; font-size:0.75rem; max-height:200px; overflow:auto; white-space:pre-wrap; word-break:break-all; }
 
     .mono {
       font-family: "SF Mono", "Fira Code", monospace;
@@ -314,6 +319,7 @@
     <a href="#account" id="navAccount" class="active hidden">Account</a>
     <a href="#users" id="navUsers" class="hidden">Users</a>
     <a href="#invites" id="navInvites" class="hidden">Invites</a>
+    <a href="#activity" id="navActivity" class="hidden">Activity</a>
   </div>
   <div class="nav-right">
     <span id="navUser"></span>
@@ -476,6 +482,53 @@
     </div>
   </div>
 
+  <!-- Activity page (admin only) -->
+  <div id="pageActivity" class="container hidden">
+    <div class="section">
+      <h2>Activity log</h2>
+      <div id="activityMsg"></div>
+      <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:end;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="actFilterUser">User</label>
+          <select id="actFilterUser" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
+            <option value="">All users</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="actFilterMethod">Method</label>
+          <select id="actFilterMethod" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
+            <option value="">All</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="actFilterPath">Path contains</label>
+          <input type="text" id="actFilterPath" placeholder="e.g. /compass/" style="padding:4px 8px; font-size:0.85rem; width:160px;">
+        </div>
+        <button class="btn-small" onclick="loadActivity()">Filter</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>User</th>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Status</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="activityTableBody"></tbody>
+        </table>
+      </div>
+      <div id="activityPagination" style="margin-top:16px; text-align:center;"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Force password change modal -->
@@ -580,6 +633,7 @@ async function bootstrap() {
     const isAdmin = currentUser.role === 'admin';
     document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
     document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
 
     populateProfile();
     route();
@@ -589,7 +643,7 @@ async function bootstrap() {
 
 function route() {
     const hash = location.hash.replace('#', '') || 'account';
-    const pages = ['pageAccount', 'pageUsers', 'pageInvites'];
+    const pages = ['pageAccount', 'pageUsers', 'pageInvites', 'pageActivity'];
     pages.forEach(p => document.getElementById(p).classList.add('hidden'));
 
     document.querySelectorAll('#navLinks a').forEach(a => {
@@ -611,6 +665,14 @@ function route() {
             if (isAdmin) {
                 document.getElementById('pageInvites').classList.remove('hidden');
                 loadInvites();
+            } else {
+                location.hash = '#account';
+            }
+            break;
+        case 'activity':
+            if (isAdmin) {
+                document.getElementById('pageActivity').classList.remove('hidden');
+                loadActivity();
             } else {
                 location.hash = '#account';
             }
@@ -893,6 +955,95 @@ async function revokeInvite(code) {
     }
 }
 
+// ── Activity log (admin) ────────────────────────────
+
+let activityOffset = 0;
+const ACTIVITY_LIMIT = 50;
+
+async function loadActivity() {
+    activityOffset = 0;
+    clearMsg('activityMsg');
+
+    // Populate user filter if empty
+    const userSelect = document.getElementById('actFilterUser');
+    if (userSelect.options.length <= 1 && allUsers.length) {
+        allUsers.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = `${u.name} (${u.email})`;
+            userSelect.appendChild(opt);
+        });
+    } else if (userSelect.options.length <= 1) {
+        try {
+            allUsers = await api.getUsers();
+            allUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.name} (${u.email})`;
+                userSelect.appendChild(opt);
+            });
+        } catch {}
+    }
+
+    await fetchActivity(false);
+}
+
+async function fetchActivity(append) {
+    try {
+        const params = { limit: ACTIVITY_LIMIT, offset: activityOffset };
+        const userId = document.getElementById('actFilterUser').value;
+        const method = document.getElementById('actFilterMethod').value;
+        const pathContains = document.getElementById('actFilterPath').value.trim();
+        if (userId) params.user_id = userId;
+        if (method) params.method = method;
+        if (pathContains) params.path_contains = pathContains;
+
+        const data = await api.getActivityLog(params);
+        renderActivity(data.items, data.total, append);
+    } catch (err) {
+        showMsg('activityMsg', err.message, 'error');
+    }
+}
+
+function renderActivity(items, total, append) {
+    const tbody = document.getElementById('activityTableBody');
+    if (!append) tbody.innerHTML = '';
+
+    const rows = items.map(a => {
+        const time = new Date(a.timestamp).toLocaleString();
+        const user = a.user_email || a.user_id || '—';
+        const methodClass = `badge badge-${a.method.toLowerCase()}`;
+        const path = esc(a.path.replace('/api/v1/', '/'));
+        const hasBody = a.request_body && Object.keys(a.request_body).length > 0;
+        const detailId = `detail-${a.id}`;
+        const detailBtn = hasBody
+            ? `<span class="detail-toggle" onclick="document.getElementById('${detailId}').classList.toggle('hidden')">show</span>`
+            : '';
+        const detailPre = hasBody
+            ? `<div id="${detailId}" class="detail-pre hidden">${esc(JSON.stringify(a.request_body, null, 2))}</div>`
+            : '';
+
+        return `<tr>
+            <td style="white-space:nowrap;font-size:0.8rem;">${time}</td>
+            <td style="font-size:0.8rem;">${esc(user)}</td>
+            <td><span class="${methodClass}">${a.method}</span></td>
+            <td style="font-size:0.8rem;" title="${esc(a.path)}">${path}</td>
+            <td>${a.status_code}</td>
+            <td>${detailBtn}${detailPre}</td>
+        </tr>`;
+    }).join('');
+    tbody.innerHTML += rows;
+
+    // Pagination
+    const pag = document.getElementById('activityPagination');
+    const loaded = activityOffset + items.length;
+    if (loaded < total) {
+        pag.innerHTML = `<button class="btn-secondary btn-small" onclick="activityOffset=${loaded};fetchActivity(true)">Load more (${loaded}/${total})</button>`;
+    } else {
+        pag.innerHTML = `<span style="font-size:0.8rem;color:#888;">${total} entries</span>`;
+    }
+}
+
 // ── Force password change ───────────────────────────
 
 async function forceChangePassword(e) {
@@ -917,6 +1068,7 @@ async function forceChangePassword(e) {
         const isAdmin = currentUser.role === 'admin';
         document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
         document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
+        document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
         populateProfile();
         route();
     } catch (err) {
