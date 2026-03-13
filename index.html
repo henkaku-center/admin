@@ -393,6 +393,34 @@
       </form>
     </div>
 
+    <div class="section">
+      <h2>Dietary preferences</h2>
+      <div id="dietaryMsg"></div>
+      <div id="dietaryCallout" class="msg msg-error" style="display:none;">
+        Please submit your dietary preferences — even if you have none. This helps us plan meals for events.
+      </div>
+      <form onsubmit="saveDietary(event)">
+        <div class="form-group">
+          <label for="dietPreferences">Preferences <span style="font-weight:400;color:#888;">(e.g. vegetarian, vegan, pescatarian, halal, kosher)</span></label>
+          <input type="text" id="dietPreferences" placeholder="Comma-separated, or leave blank" />
+        </div>
+        <div class="form-group">
+          <label for="dietRestrictions">Restrictions <span style="font-weight:400;color:#888;">(e.g. no pork, no beef, no alcohol)</span></label>
+          <input type="text" id="dietRestrictions" placeholder="Comma-separated, or leave blank" />
+        </div>
+        <div class="form-group">
+          <label for="dietAllergies">Allergies <span style="font-weight:400;color:#888;">(e.g. peanuts, shellfish, gluten, dairy)</span></label>
+          <input type="text" id="dietAllergies" placeholder="Comma-separated, or leave blank" />
+        </div>
+        <div class="form-group">
+          <label for="dietNotes">Additional notes</label>
+          <input type="text" id="dietNotes" placeholder="Anything else we should know" />
+        </div>
+        <button type="submit">Save dietary info</button>
+        <span style="font-size:0.8rem;color:#888;margin-left:12px;">Submitting with all fields blank means "no preferences."</span>
+      </form>
+    </div>
+
     <div class="section" id="accountRolesSection">
       <h2>Roles &amp; access</h2>
       <div id="accountRoles"></div>
@@ -410,6 +438,7 @@
             <th>Name</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Diet</th>
             <th>Created</th>
             <th></th>
           </tr>
@@ -594,6 +623,9 @@ function populateProfile() {
     document.getElementById('profileId').value = currentUser.id;
     document.getElementById('profileCreated').value = new Date(currentUser.created_at).toLocaleDateString();
 
+    // Dietary info
+    populateDietary();
+
     // Roles display
     const rolesEl = document.getElementById('accountRoles');
     const parts = [];
@@ -656,6 +688,48 @@ async function changePassword(e) {
     }
 }
 
+// ── Dietary info ────────────────────────────────────
+
+function splitList(str) {
+    return str.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function populateDietary() {
+    const di = currentUser.dietary_info;
+    const callout = document.getElementById('dietaryCallout');
+    if (!di || !di.submitted) {
+        callout.style.display = '';
+        document.getElementById('dietPreferences').value = '';
+        document.getElementById('dietRestrictions').value = '';
+        document.getElementById('dietAllergies').value = '';
+        document.getElementById('dietNotes').value = '';
+    } else {
+        callout.style.display = 'none';
+        document.getElementById('dietPreferences').value = (di.preferences || []).join(', ');
+        document.getElementById('dietRestrictions').value = (di.restrictions || []).join(', ');
+        document.getElementById('dietAllergies').value = (di.allergies || []).join(', ');
+        document.getElementById('dietNotes').value = di.notes || '';
+    }
+}
+
+async function saveDietary(e) {
+    e.preventDefault();
+    clearMsg('dietaryMsg');
+    try {
+        currentUser = await api.updateDietaryInfo({
+            preferences: splitList(document.getElementById('dietPreferences').value),
+            restrictions: splitList(document.getElementById('dietRestrictions').value),
+            allergies: splitList(document.getElementById('dietAllergies').value),
+            notes: document.getElementById('dietNotes').value.trim(),
+            submitted: true,
+        });
+        populateDietary();
+        showMsg('dietaryMsg', 'Dietary preferences saved.', 'success');
+    } catch (err) {
+        showMsg('dietaryMsg', err.message, 'error');
+    }
+}
+
 // ── Users (admin) ───────────────────────────────────
 
 let allUsers = [];
@@ -702,11 +776,24 @@ function renderUsers() {
             </select>
         </div>`;
 
+        const di = u.dietary_info;
+        const dietStatus = !di || !di.submitted
+            ? '<span style="color:#c62828;font-size:0.8rem;">not submitted</span>'
+            : (di.preferences.length || di.restrictions.length || di.allergies.length || di.notes
+                ? [
+                    ...di.preferences.map(s => `<span class="badge">${esc(s)}</span>`),
+                    ...di.restrictions.map(s => `<span class="badge" style="background:#fff3e0;color:#e65100;">${esc(s)}</span>`),
+                    ...di.allergies.map(s => `<span class="badge" style="background:#fce4ec;color:#c62828;">${esc(s)}</span>`),
+                    di.notes ? `<span style="font-size:0.75rem;color:#666;">${esc(di.notes)}</span>` : '',
+                  ].filter(Boolean).join(' ')
+                : '<span style="font-size:0.8rem;color:#888;">no preferences</span>');
+
         return `
             <tr>
                 <td>${esc(u.name)}</td>
                 <td class="mono">${esc(u.email)}</td>
                 <td>${isEditing ? roleEditor : roleDisplay}</td>
+                <td>${dietStatus}</td>
                 <td>${new Date(u.created_at).toLocaleDateString()}</td>
                 <td>${isEditing
                     ? `<button class="btn-small" onclick="saveRole('${u.id}')">Save</button>

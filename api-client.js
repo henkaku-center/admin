@@ -76,6 +76,15 @@ class ApiClient {
         });
     }
 
+    // ── Dietary Info ─────────────────────────────────────────
+
+    async updateDietaryInfo(data) {
+        return this._fetch('/api/v1/auth/me/dietary', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
     // ── Admin: Users ──────────────────────────────────────────
 
     async getUsers() {
