@@ -453,7 +453,7 @@
               <th>Name</th>
               <th>Role</th>
               <th>Diet</th>
-              <th>Created</th>
+              <th>Last Login</th>
               <th></th>
             </tr>
           </thead>
@@ -885,7 +885,7 @@ function renderUsers() {
                 <td>${nameHtml}${u.must_change_password ? ' <span class="badge" style="background:#fff3e0;color:#e65100;">temp pw</span>' : ''}<br><span class="mono" style="font-size:0.75rem;color:#888;">${esc(u.email)}</span></td>
                 <td>${isEditing ? roleEditor : roleDisplay}</td>
                 <td>${dietStatus}</td>
-                <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '<span style="font-size:0.8rem;color:#888;">never</span>'}</td>
                 <td>${isEditing
                     ? `<button class="btn-small" onclick="saveRole('${u.id}')">Save</button>
                        <button class="btn-secondary btn-small" onclick="cancelEditRole()">Cancel</button>`
