@@ -882,7 +882,7 @@ function renderUsers() {
 
         return `
             <tr>
-                <td>${nameHtml}<br><span class="mono" style="font-size:0.75rem;color:#888;">${esc(u.email)}</span></td>
+                <td>${nameHtml}${u.must_change_password ? ' <span class="badge" style="background:#fff3e0;color:#e65100;">temp pw</span>' : ''}<br><span class="mono" style="font-size:0.75rem;color:#888;">${esc(u.email)}</span></td>
                 <td>${isEditing ? roleEditor : roleDisplay}</td>
                 <td>${dietStatus}</td>
                 <td>${new Date(u.created_at).toLocaleDateString()}</td>
