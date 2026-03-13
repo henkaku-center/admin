@@ -129,6 +129,10 @@ class ApiClient {
         return this._fetch('/api/v1/auth/invite-codes');
     }
 
+    async deleteInviteCode(code) {
+        return this._fetch(`/api/v1/auth/invite-codes/${code}`, { method: 'DELETE' });
+    }
+
     // ── Internal ──────────────────────────────────────────────
 
     _storeTokens(access, refresh) {

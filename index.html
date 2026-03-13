@@ -468,6 +468,7 @@
             <th>Created</th>
             <th>Status</th>
             <th>Used by</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="invitesTableBody"></tbody>
@@ -853,6 +854,7 @@ function renderInvites(codes) {
     tbody.innerHTML = codes.map(c => {
         const used = !!c.used_by;
         const expired = c.expires_at && new Date(c.expires_at) < new Date();
+        const available = !used && !expired;
         let status = '<span class="badge" style="background:#e8f5e9;color:#2e7d32;">available</span>';
         if (used) status = '<span class="badge" style="background:#e0e0e0;color:#666;">used</span>';
         else if (expired) status = '<span class="badge" style="background:#fff3e0;color:#e65100;">expired</span>';
@@ -862,6 +864,7 @@ function renderInvites(codes) {
                 <td>${new Date(c.created_at).toLocaleDateString()}</td>
                 <td>${status}</td>
                 <td>${c.used_by ? esc(c.used_by) : ''}</td>
+                <td>${available ? `<button class="btn-danger btn-small" onclick="revokeInvite('${esc(c.code)}')">Revoke</button>` : ''}</td>
             </tr>
         `;
     }).join('');
@@ -872,6 +875,18 @@ async function createInvite() {
     try {
         const code = await api.createInviteCode();
         showMsg('invitesMsg', `Invite code created: ${code.code}`, 'success');
+        loadInvites();
+    } catch (err) {
+        showMsg('invitesMsg', err.message, 'error');
+    }
+}
+
+async function revokeInvite(code) {
+    if (!confirm(`Revoke invite code ${code}?`)) return;
+    clearMsg('invitesMsg');
+    try {
+        await api.deleteInviteCode(code);
+        showMsg('invitesMsg', 'Invite code revoked.', 'success');
         loadInvites();
     } catch (err) {
         showMsg('invitesMsg', err.message, 'error');
