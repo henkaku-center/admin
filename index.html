@@ -375,6 +375,10 @@
           <label>User ID</label>
           <input type="text" id="profileId" readonly />
         </div>
+        <div class="form-group" id="profileEntityLink" style="display:none;">
+          <label>Compass profile</label>
+          <a id="profileEntityAnchor" target="_blank" rel="noopener" style="font-size:0.9rem;"></a>
+        </div>
         <div class="form-group">
           <label>Member since</label>
           <input type="text" id="profileCreated" readonly />
@@ -691,6 +695,17 @@ function populateProfile() {
     document.getElementById('profileId').value = currentUser.id;
     document.getElementById('profileCreated').value = new Date(currentUser.created_at).toLocaleDateString();
 
+    // Compass entity link
+    const entityLinkDiv = document.getElementById('profileEntityLink');
+    if (currentUser.compass_entity_id) {
+        const anchor = document.getElementById('profileEntityAnchor');
+        anchor.href = `https://compass.henkaku.center/#${currentUser.compass_entity_id}`;
+        anchor.textContent = currentUser.compass_entity_id;
+        entityLinkDiv.style.display = '';
+    } else {
+        entityLinkDiv.style.display = 'none';
+    }
+
     // Dietary info
     populateDietary();
 
@@ -856,9 +871,13 @@ function renderUsers() {
                   ].filter(Boolean).join(' ')
                 : '<span style="font-size:0.8rem;color:#888;">no preferences</span>');
 
+        const nameHtml = u.compass_entity_id
+            ? `<a href="https://compass.henkaku.center/#${esc(u.compass_entity_id)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted;text-underline-offset:2px;">${esc(u.name)}</a>`
+            : esc(u.name);
+
         return `
             <tr>
-                <td>${esc(u.name)}<br><span class="mono" style="font-size:0.75rem;color:#888;">${esc(u.email)}</span></td>
+                <td>${nameHtml}<br><span class="mono" style="font-size:0.75rem;color:#888;">${esc(u.email)}</span></td>
                 <td>${isEditing ? roleEditor : roleDisplay}</td>
                 <td>${dietStatus}</td>
                 <td>${new Date(u.created_at).toLocaleDateString()}</td>
