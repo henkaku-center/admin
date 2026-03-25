@@ -847,8 +847,15 @@ function roleBadgeClass(role) {
 }
 
 function renderUsers() {
+    const roleOrder = ROLE_HIERARCHY.map(r => r.value);
+    const sorted = [...allUsers].sort((a, b) => {
+        const ra = roleOrder.indexOf(a.role);
+        const rb = roleOrder.indexOf(b.role);
+        if (ra !== rb) return rb - ra; // higher access first
+        return (a.name || '').localeCompare(b.name || '');
+    });
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = allUsers.map(u => {
+    tbody.innerHTML = sorted.map(u => {
         const isEditing = editingUserId === u.id;
         const label = ROLE_LABELS[u.role] || u.role;
 
