@@ -32,8 +32,9 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 |------|--------|-------------|
 | Login | Everyone | Email/password login via Registry |
 | Account | Authenticated users | Edit name, email, password; view user ID and roles |
-| Users | Admins only | List all users with roles |
+| Users | Admins only | List all users with roles and last login |
 | Invites | Admins only | Create and view invite codes |
+| Activity | Admins only | Activity log — logins, entity views, writes (filterable by user, method, path) |
 
 ### Registry endpoints used
 
@@ -46,6 +47,7 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 | `/api/v1/auth/change-password` | POST | Change password |
 | `/api/v1/auth/users` | GET | List all users (admin) |
 | `/api/v1/auth/invite-codes` | GET/POST | List/create invite codes (admin) |
+| `/api/v1/activity` | GET | Activity log with filters (admin) |
 
 ## Development
 
