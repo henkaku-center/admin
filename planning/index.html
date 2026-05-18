@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Architecture — Henkaku & SDS</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 32px 48px 120px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 24px; margin-bottom: 4px; }
+        .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+        h2 {
+            font-size: 18px;
+            margin: 40px 0 12px;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+        }
+        p { margin: 8px 0 16px; font-size: 14px; color: var(--text-muted); }
+        .diagram {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 16px 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .diagram svg { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <h1>Revitalized Henkaku & SDS Websites</h1>
+    <p class="subtitle">Architecture proposal — April 2026</p>
+
+    <!-- ───────────────────────────────────────── -->
+    <h2>1. High-Level Architecture</h2>
+    <p>Two public-facing sites backed by the existing Registry API. Content is a mix of editable CMS pages (landing, about, articles) and live data pulled from Compass entities.</p>
+
+    <div class="diagram">
+        <pre class="mermaid">
+graph TB
+    subgraph "Public Websites"
+        HW["www.henkaku.center"]
+        SW["sds.chibatech.dev"]
+    end
+
+    subgraph "Astro SSG + Headless CMS"
+        ASTRO["Astro 5<br/><i>Static Site Generator</i>"]
+        CMS["Decap CMS<br/><i>Git-based headless CMS</i><br/><i>(Markdown + frontmatter)</i>"]
+        GH_CONTENT["GitHub Repo<br/><i>/content/*.md</i><br/><i>articles, landing blocks, pages</i>"]
+    end
+
+    subgraph "Registry API (existing)"
+        API["registry.henkaku.center<br/><i>FastAPI</i>"]
+        PG["PostgreSQL 16"]
+    end
+
+    subgraph "Compass Tools (existing)"
+        COMPASS["compass.henkaku.center"]
+        ADMIN["admin.henkaku.center"]
+    end
+
+    HW -->|"serves"| ASTRO
+    SW -->|"serves"| ASTRO
+    ASTRO -->|"build-time fetch"| API
+    ASTRO -->|"reads"| GH_CONTENT
+    CMS -->|"commits to"| GH_CONTENT
+    API --> PG
+    COMPASS -->|"contributors edit<br/>their own entities"| API
+    ADMIN -->|"manages users"| API
+
+    classDef existing fill:#1f6feb33,stroke:#58a6ff,color:#e6edf3
+    classDef new fill:#23803033,stroke:#3fb950,color:#e6edf3
+    class API,PG,COMPASS,ADMIN existing
+    class HW,SW,ASTRO,CMS,GH_CONTENT new
+        </pre>
+    </div>
+
+    <!-- ───────────────────────────────────────── -->
+    <h2>2. Content Model</h2>
+    <p>Editorial content (articles, landing page blocks) lives in Git as Markdown. Structured data (people, projects, initiatives) lives in the Registry and is fetched at build time.</p>
+
+    <div class="diagram">
+        <pre class="mermaid">
+graph LR
+    subgraph "Git-Managed Content (Decap CMS)"
+        LP["Landing Page Blocks<br/><i>hero, featured, calls-to-action</i>"]
+        ART["Feature Articles<br/><i>by Joseph Park et al.</i><br/><i>Markdown + frontmatter</i>"]
+        PG2["Static Pages<br/><i>about, contact, programs</i>"]
+    end
+
+    subgraph "Registry Compass Entities"
+        PER["person<br/><i>faculty, staff, researchers</i>"]
+        PROJ["project<br/><i>active research</i>"]
+        INIT["initiative<br/><i>ongoing programs</i>"]
+        COURSE["course / curriculum"]
+        PUB["publication / post"]
+        EVT["event"]
+    end
+
+    subgraph "Built Pages"
+        HOME["Landing Page"]
+        PEOPLE["People Directory"]
+        PROJECTS["Projects Gallery"]
+        ARTICLE["Article Pages"]
+        DETAIL["Entity Detail Pages"]
+    end
+
+    LP --> HOME
+    ART --> ARTICLE
+    PG2 --> HOME
+    PER --> PEOPLE
+    PER --> DETAIL
+    PROJ --> PROJECTS
+    PROJ --> DETAIL
+    INIT --> PROJECTS
+    COURSE --> DETAIL
+    PUB --> DETAIL
+    EVT --> HOME
+    ART -.->|"links to entities<br/>via entity IDs"| DETAIL
+        </pre>
+    </div>
+
+    <!-- ───────────────────────────────────────── -->
+    <h2>3. Tech Stack</h2>
+    <p>Astro for static generation (fast, SEO-friendly). Decap CMS for non-technical editors. Registry API for structured data. GitHub Actions for automated rebuilds.</p>
+
+    <div class="diagram">
+        <pre class="mermaid">
+graph TB
+    subgraph "Frontend — Astro 5"
+        direction TB
+        ASTRO2["Astro 5 SSG<br/><i>Islands architecture</i>"]
+        ISLANDS["Interactive Islands<br/><i>Svelte or Preact components</i><br/><i>(search, filters, lightbox)</i>"]
+        STYLE["Tailwind CSS<br/><i>design system</i>"]
+        MD["Astro Content Collections<br/><i>typed Markdown/MDX</i>"]
+    end
+
+    subgraph "CMS — Decap (Netlify CMS fork)"
+        DECAP["Decap CMS<br/><i>/admin route</i>"]
+        OAUTH["GitHub OAuth<br/><i>editor authentication</i>"]
+        PREVIEW["Live preview<br/><i>in-browser editing</i>"]
+    end
+
+    subgraph "Data — Registry API"
+        FETCH["Build-time fetch<br/><i>getStaticPaths()</i>"]
+        ENTITIES["GET /compass/entities<br/><i>?type=person,project,...</i>"]
+        RELATIONS["GET /compass/relations<br/><i>cross-links between entities</i>"]
+        FILES["GET /compass/files<br/><i>portraits, docs</i>"]
+    end
+
+    subgraph "Deploy"
+        GHA["GitHub Actions<br/><i>astro build on push</i>"]
+        PAGES["GitHub Pages<br/><i>static hosting</i>"]
+        WEBHOOK["Registry Webhook<br/><i>triggers rebuild on<br/>entity changes</i>"]
+    end
+
+    ASTRO2 --- ISLANDS
+    ASTRO2 --- STYLE
+    ASTRO2 --- MD
+    DECAP --- OAUTH
+    DECAP --- PREVIEW
+    DECAP -->|"commits .md"| MD
+    FETCH --> ENTITIES
+    FETCH --> RELATIONS
+    FETCH --> FILES
+    ASTRO2 -->|"build-time"| FETCH
+    GHA -->|"builds"| ASTRO2
+    GHA -->|"deploys to"| PAGES
+    WEBHOOK -->|"triggers"| GHA
+
+    classDef existing fill:#1f6feb33,stroke:#58a6ff,color:#e6edf3
+    classDef new fill:#23803033,stroke:#3fb950,color:#e6edf3
+    class ENTITIES,RELATIONS,FILES existing
+    class ASTRO2,ISLANDS,STYLE,MD,DECAP,OAUTH,PREVIEW,GHA,PAGES,WEBHOOK,FETCH new
+        </pre>
+    </div>
+
+    <!-- ───────────────────────────────────────── -->
+    <h2>4. Contributor Workflow</h2>
+    <p>Two contribution paths: technical contributors edit entities via Compass, editorial contributors write articles via Decap CMS. Both feed the same built site.</p>
+
+    <div class="diagram">
+        <pre class="mermaid">
+sequenceDiagram
+    participant Editor as Article Author<br/>(e.g. Joseph Park)
+    participant CMS as Decap CMS
+    participant Git as GitHub Repo
+    participant GHA as GitHub Actions
+    participant Site as Public Website
+
+    Editor->>CMS: Write feature article (Markdown)
+    Editor->>CMS: Link to compass entities by ID
+    CMS->>Git: Commit article .md file
+    Git->>GHA: Push triggers build
+    GHA->>Site: Deploy updated static site
+
+    participant Member as Community Member
+    participant Compass as Compass App
+    participant Registry as Registry API
+
+    Member->>Compass: Update own profile / project
+    Compass->>Registry: PATCH /compass/entities/{id}
+    Registry-->>GHA: Webhook triggers rebuild
+    GHA->>Site: Deploy with fresh entity data
+        </pre>
+    </div>
+
+    <!-- ───────────────────────────────────────── -->
+    <h2>5. Two Sites, Shared Codebase</h2>
+    <p>A single Astro monorepo with shared components and per-site configuration. Each site gets its own branding, landing page, and content subset.</p>
+
+    <div class="diagram">
+        <pre class="mermaid">
+graph TB
+    subgraph "Monorepo"
+        direction TB
+        SHARED["packages/shared<br/><i>components, registry client,<br/>design tokens, layouts</i>"]
+        HENKAKU["sites/henkaku<br/><i>www.henkaku.center</i><br/><i>All entities, research focus,<br/>governance, community</i>"]
+        SDS["sites/sds<br/><i>sds.chibatech.dev</i><br/><i>Academic focus: courses,<br/>faculty, student life, admissions</i>"]
+    end
+
+    subgraph "Content Directories"
+        HC["sites/henkaku/content/<br/><i>articles/, landing/, pages/</i>"]
+        SC["sites/sds/content/<br/><i>articles/, landing/, pages/</i>"]
+    end
+
+    subgraph "Entity Filters (build-time)"
+        HF["Henkaku: all entity types"]
+        SF["SDS: person (faculty/staff),<br/>course, curriculum, event"]
+    end
+
+    SHARED --> HENKAKU
+    SHARED --> SDS
+    HC --> HENKAKU
+    SC --> SDS
+    HF --> HENKAKU
+    SF --> SDS
+        </pre>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                darkMode: true,
+                background: '#161b22',
+                primaryColor: '#1f6feb',
+                primaryTextColor: '#e6edf3',
+                primaryBorderColor: '#30363d',
+                lineColor: '#8b949e',
+                secondaryColor: '#21262d',
+                tertiaryColor: '#161b22',
+                fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif',
+                fontSize: '13px',
+                actorTextColor: '#e6edf3',
+                signalColor: '#8b949e',
+                signalTextColor: '#e6edf3'
+            },
+            flowchart: { curve: 'basis', padding: 16 },
+            sequence: { mirrorActors: false }
+        });
+    </script>
+</body>
+</html>
