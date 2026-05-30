@@ -140,8 +140,8 @@ class ApiClient {
         if (params.limit) qs.set('limit', params.limit);
         if (params.offset) qs.set('offset', params.offset);
         if (params.user_id) qs.set('user_id', params.user_id);
-        if (params.method) qs.set('method', params.method);
         if (params.path_contains) qs.set('path_contains', params.path_contains);
+        if (params.category) qs.set('category', params.category);
         const query = qs.toString() ? `?${qs}` : '';
         return this._fetch(`/api/v1/activity${query}`);
     }

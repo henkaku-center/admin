@@ -495,20 +495,18 @@
       <div id="activityMsg"></div>
       <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:end;">
         <div class="form-group" style="margin-bottom:0;">
-          <label for="actFilterUser">User</label>
-          <select id="actFilterUser" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
-            <option value="">All users</option>
+          <label for="actFilterCategory">Show</label>
+          <select id="actFilterCategory" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
+            <option value="edits" selected>Edits</option>
+            <option value="logins">Logins</option>
+            <option value="views">Views</option>
+            <option value="all">All activity</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:0;">
-          <label for="actFilterMethod">Method</label>
-          <select id="actFilterMethod" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
-            <option value="">All</option>
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="PATCH">PATCH</option>
-            <option value="DELETE">DELETE</option>
+          <label for="actFilterUser">User</label>
+          <select id="actFilterUser" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
+            <option value="">All users</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:0;">
@@ -1025,11 +1023,11 @@ async function fetchActivity(append) {
     try {
         const params = { limit: ACTIVITY_LIMIT, offset: activityOffset };
         const userId = document.getElementById('actFilterUser').value;
-        const method = document.getElementById('actFilterMethod').value;
         const pathContains = document.getElementById('actFilterPath').value.trim();
+        const category = document.getElementById('actFilterCategory').value;
         if (userId) params.user_id = userId;
-        if (method) params.method = method;
         if (pathContains) params.path_contains = pathContains;
+        if (category && category !== 'all') params.category = category;
 
         const data = await api.getActivityLog(params);
         renderActivity(data.items, data.total, append);
