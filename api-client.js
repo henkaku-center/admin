@@ -116,6 +116,31 @@ class ApiClient {
         });
     }
 
+    // ── Emailed account links ─────────────────────────────────
+
+    async inviteUser({ email, name, role = 'full_view', compassEntityId = null }) {
+        return this._fetch('/api/v1/auth/invitations', {
+            method: 'POST',
+            body: JSON.stringify({ email, name, role, compass_entity_id: compassEntityId || null }),
+        });
+    }
+
+    async resendInvite(userId) {
+        return this._fetch(`/api/v1/auth/users/${userId}/invitation`, { method: 'POST' });
+    }
+
+    async sendPasswordReset(userId) {
+        return this._fetch(`/api/v1/auth/users/${userId}/password-reset`, { method: 'POST' });
+    }
+
+    async signOutUser(userId) {
+        return this._fetch(`/api/v1/auth/users/${userId}/sign-out`, { method: 'POST' });
+    }
+
+    async signOutEverywhere() {
+        return this._fetch('/api/v1/auth/sign-out-everywhere', { method: 'POST' });
+    }
+
     // ── Admin: Invite Codes ───────────────────────────────────
 
     async createInviteCode(expiresAt = null) {

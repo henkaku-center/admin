@@ -17,6 +17,7 @@ Vanilla HTML/CSS/JS — no build process, no frameworks, no bundlers. Served via
 ```
 admin/
 ├── index.html        # Single-page app (login, account, admin views)
+├── account/index.html # Shared page for emailed links (#token=…) and "Forgot password?" (?return_to=…) for every app
 ├── api-client.js     # Registry API client (auth, profile, user management)
 ├── CNAME             # GitHub Pages custom domain (admin.henkaku.center)
 └── CLAUDE.md         # This file
@@ -48,6 +49,11 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 | `/api/v1/auth/users` | GET | List all users (admin) |
 | `/api/v1/auth/invite-codes` | GET/POST | List/create invite codes (admin) |
 | `/api/v1/activity` | GET | Activity log with filters (admin) |
+| `/api/v1/auth/invitations` | POST | Invite a user (Users page; content managers see only this form) |
+| `/api/v1/auth/users/{id}/invitation` | POST | Resend invite (never-signed-in users) |
+| `/api/v1/auth/users/{id}/password-reset` | POST | Email a reset link (admin) |
+| `/api/v1/auth/users/{id}/sign-out`, `/api/v1/auth/sign-out-everywhere` | POST | Sign out on every device |
+| `/api/v1/auth/tokens/inspect`, `/invitations/accept`, `/password-reset/request`, `/password-reset/confirm`, `/email-change/confirm` | POST | Used by `account/index.html` |
 
 ## Development
 

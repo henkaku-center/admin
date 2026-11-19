@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Henkaku Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="icon" type="image/png" href="../compass-icon.png" />
+  <!--
+    Shared landing page for every emailed account link (invitations, password resets,
+    email-change confirmation) and the "Forgot password?" form for all Henkaku/SDS apps.
+
+    Emailed links:     /account/#token=<raw>          (fragment: never sent to any server)
+    Forgot password:   /account/?return_to=<app URL>  (Registry checks return_to against its allowlist)
+  -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6; color: #111; background: #fafafa;
+      min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+      padding: 64px 16px;
+    }
+    .card { width: 100%; max-width: 420px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 32px; }
+    .brand { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: #555; margin-bottom: 20px; }
+    h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 12px; }
+    p { margin-bottom: 16px; font-size: 0.95rem; }
+    .muted { color: #666; font-size: 0.85rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; }
+    input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font: inherit; margin-bottom: 14px; }
+    input:focus { outline: 2px solid #111; outline-offset: -1px; }
+    button, .btn {
+      display: inline-block; padding: 9px 20px; background: #111; color: #fff; border: none;
+      border-radius: 4px; font: inherit; font-size: 0.9rem; cursor: pointer; text-decoration: none;
+    }
+    button:hover, .btn:hover { background: #333; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .msg { padding: 10px 12px; border-radius: 4px; font-size: 0.9rem; margin-bottom: 16px; }
+    .msg.error { background: #fdecea; color: #b71c1c; }
+    .msg.success { background: #e8f5e9; color: #1b5e20; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">Henkaku Center</div>
+  <div id="msg" class="msg" hidden></div>
+
+  <section id="loading"><p class="muted">Checking your link…</p></section>
+
+  <!-- Invite / reset: choose a password -->
+  <section id="setPassword" hidden>
+    <h1 id="setTitle"></h1>
+    <p id="setIntro"></p>
+    <form id="setForm">
+      <label for="pw1">New password</label>
+      <input type="password" id="pw1" autocomplete="new-password" minlength="10" required />
+      <label for="pw2">Confirm password</label>
+      <input type="password" id="pw2" autocomplete="new-password" minlength="10" required />
+      <p class="muted">At least 10 characters. A few unrelated words make a strong, memorable password.</p>
+      <button type="submit" id="setBtn">Set password</button>
+    </form>
+  </section>
+
+  <!-- Email change confirmation -->
+  <section id="confirmEmail" hidden>
+    <h1>Confirm your new email</h1>
+    <p id="confirmIntro"></p>
+    <button id="confirmBtn">Confirm email change</button>
+  </section>
+
+  <!-- No token: forgot password -->
+  <section id="forgot" hidden>
+    <h1>Forgot your password?</h1>
+    <p>Enter the email you use to sign in. If it belongs to an account, we'll email you a link to choose a new password.</p>
+    <form id="forgotForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" autocomplete="email" required />
+      <button type="submit" id="forgotBtn">Email me a reset link</button>
+    </form>
+  </section>
+
+  <!-- Finished -->
+  <section id="done" hidden>
+    <h1 id="doneTitle"></h1>
+    <p id="doneText"></p>
+    <a class="btn" id="continueBtn" href="../">Continue</a>
+  </section>
+</main>
+
+<script>
+const API_BASE = 'https://registry.henkaku.center';
+const $ = (id) => document.getElementById(id);
+
+// Read the token, then strip it from the address bar and history before any request.
+const hash = new URLSearchParams(location.hash.slice(1));
+const token = hash.get('token');
+const query = new URLSearchParams(location.search);
+const queryReturnTo = query.get('return_to');
+if (token) history.replaceState(null, '', location.pathname + location.search);
+
+let returnTo = null;
+
+function show(id) {
+  for (const s of ['loading', 'setPassword', 'confirmEmail', 'forgot', 'done']) $(s).hidden = s !== id;
+}
+function showMsg(text, kind = 'error') { const m = $('msg'); m.textContent = text; m.className = `msg ${kind}`; m.hidden = !text; }
+
+async function post(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  let data = null;
+  try { data = await res.json(); } catch (_) { /* empty body */ }
+  if (!res.ok) {
+    let detail = data && data.detail;
+    if (Array.isArray(detail)) detail = detail.map(d => d.msg).join('; ');
+    throw Object.assign(new Error(detail || `Request failed (${res.status})`), { status: res.status });
+  }
+  return data;
+}
+
+function siteName(url) {
+  try {
+    const host = new URL(url).hostname;
+    return { 'compass.henkaku.center': 'Compass', 'charter.henkaku.center': 'Charter',
+             'admin.henkaku.center': 'your account page', 'student.chibatech.dev': 'the SDS student portal',
+             'proto.chibatech.dev': 'Design & Prototyping' }[host] || host;
+  } catch (_) { return null; }
+}
+
+function finish(title, text) {
+  $('doneTitle').textContent = title;
+  $('doneText').textContent = text;
+  const target = returnTo || '../';
+  $('continueBtn').href = target;
+  $('continueBtn').textContent = returnTo ? `Continue to ${siteName(returnTo)}` : 'Go to your account';
+  show('done');
+}
+
+async function start() {
+  if (!token) {
+    show('forgot');
+    return;
+  }
+  // Whoever was signed in on this browser is signed out, so the link's owner never lands in
+  // someone else's account.
+  localStorage.removeItem('registry_access_token');
+  localStorage.removeItem('registry_refresh_token');
+  let info;
+  try {
+    info = await post('/api/v1/auth/tokens/inspect', { token });
+  } catch (e) {
+    showMsg(e.status === 404 ? 'This link is invalid, has already been used, or has expired.' : e.message);
+    $('forgot').querySelector('h1').textContent = 'Request a new link';
+    show('forgot');
+    return;
+  }
+  returnTo = info.return_to;
+  if (info.purpose === 'email_change') {
+    $('confirmIntro').textContent = `Change the email for ${info.email} to ${info.new_email}?`;
+    show('confirmEmail');
+    return;
+  }
+  if (info.purpose === 'invite') {
+    $('setTitle').textContent = `Welcome, ${info.name}`;
+    $('setIntro').textContent = `Choose a password for your Henkaku account, ${info.email}. One account signs you in to every Henkaku and SDS site.`;
+  } else {
+    $('setTitle').textContent = 'Choose a new password';
+    $('setIntro').textContent = `For ${info.email}. Setting it signs this account out on every other device.`;
+  }
+  $('setForm').dataset.purpose = info.purpose;
+  show('setPassword');
+  $('pw1').focus();
+}
+
+$('setForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showMsg('');
+  if ($('pw1').value !== $('pw2').value) { showMsg('The passwords do not match.'); return; }
+  const invite = e.target.dataset.purpose === 'invite';
+  $('setBtn').disabled = true;
+  try {
+    const res = await post(invite ? '/api/v1/auth/invitations/accept' : '/api/v1/auth/password-reset/confirm',
+                           { token, password: $('pw1').value });
+    // Signs in on this site (admin); other sites ask for the new password once.
+    localStorage.setItem('registry_access_token', res.access_token);
+    localStorage.setItem('registry_refresh_token', res.refresh_token);
+    finish(invite ? 'Your account is ready' : 'Password changed',
+           returnTo ? `Sign in to ${siteName(returnTo)} with your email and new password.` : 'You are signed in.');
+  } catch (err) {
+    showMsg(err.message);
+    if (err.status === 400) $('setForm').hidden = true;  // dead link; a policy error keeps the form
+  } finally {
+    $('setBtn').disabled = false;
+  }
+});
+
+$('confirmBtn').addEventListener('click', async () => {
+  showMsg('');
+  $('confirmBtn').disabled = true;
+  try {
+    const res = await post('/api/v1/auth/email-change/confirm', { token });
+    returnTo = res.return_to || returnTo;
+    finish('Email changed', `Sign in with ${res.email} from now on.`);
+  } catch (err) {
+    showMsg(err.message);
+    $('confirmBtn').disabled = false;
+  }
+});
+
+$('forgotForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showMsg('');
+  $('forgotBtn').disabled = true;
+  try {
+    const body = { email: $('email').value.trim() };
+    if (queryReturnTo) body.return_to = queryReturnTo;
+    await post('/api/v1/auth/password-reset/request', body);
+    $('forgotForm').hidden = true;
+    showMsg('If that email belongs to an account, a reset link is on its way. It expires in 1 hour.', 'success');
+  } catch (err) {
+    showMsg(err.status === 429 ? 'Too many requests. Please wait a minute and try again.' : err.message);
+  } finally {
+    $('forgotBtn').disabled = false;
+  }
+});
+
+start();
+</script>
+</body>
+</html>

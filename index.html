@@ -348,6 +348,7 @@
       </div>
       <button type="submit" id="loginBtn">Sign in</button>
     </form>
+    <p style="margin-top:16px;font-size:13px;text-align:center;"><a href="account/" style="color:#555;">Forgot password?</a></p>
     <p style="margin-top:16px;font-size:13px;color:#888;text-align:center;">For support, contact <a href="mailto:admin@henkaku.center" style="color:#888;">admin@henkaku.center</a></p>
   </div>
 </div>
@@ -437,6 +438,13 @@
       </form>
     </div>
 
+    <div class="section">
+      <h2>Sessions</h2>
+      <div id="sessionsMsg"></div>
+      <p style="font-size:0.9rem;margin-bottom:12px;">Signed in on a shared or lost device? Sign out of your account on every device and browser, including this one.</p>
+      <button class="btn-secondary" onclick="signOutEverywhere()">Sign out everywhere</button>
+    </div>
+
     <div class="section" id="accountRolesSection">
       <h2>Roles &amp; access</h2>
       <div id="accountRoles"></div>
@@ -446,6 +454,31 @@
   <!-- Users page (admin only) -->
   <div id="pageUsers" class="container hidden">
     <div class="section">
+      <h2>Invite a user</h2>
+      <div id="inviteMsg"></div>
+      <p style="font-size:0.9rem;margin-bottom:12px;">Creates the account and emails a link to choose a password. The link works once and expires in 14 days.</p>
+      <form onsubmit="inviteUser(event)">
+        <div class="form-group">
+          <label for="inviteName">Name</label>
+          <input type="text" id="inviteName" required />
+        </div>
+        <div class="form-group">
+          <label for="inviteEmail">Email</label>
+          <input type="email" id="inviteEmail" required />
+        </div>
+        <div class="form-group">
+          <label for="inviteRole">Role</label>
+          <select id="inviteRole" style="padding:6px 8px;font-family:inherit;border:1px solid #ccc;border-radius:4px;"></select>
+        </div>
+        <div class="form-group">
+          <label for="inviteEntity">Compass profile ID <span style="font-weight:400;color:#888;">(optional, e.g. person_hanako_yamada)</span></label>
+          <input type="text" id="inviteEntity" />
+        </div>
+        <button type="submit" id="inviteBtn">Send invitation</button>
+      </form>
+    </div>
+
+    <div class="section" id="allUsersSection">
       <h2>All users</h2>
       <div id="usersMsg"></div>
       <div class="table-wrap">
@@ -636,7 +669,7 @@ async function bootstrap() {
     document.getElementById('navUser').textContent = currentUser.name;
 
     const isAdmin = currentUser.role === 'admin';
-    document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navUsers').classList.toggle('hidden', !canInvite());
     document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
     document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
 
@@ -659,9 +692,11 @@ function route() {
 
     switch (hash) {
         case 'users':
-            if (isAdmin) {
+            if (canInvite()) {
                 document.getElementById('pageUsers').classList.remove('hidden');
-                loadUsers();
+                populateInviteRoles();
+                document.getElementById('allUsersSection').classList.toggle('hidden', !isAdmin);
+                if (isAdmin) loadUsers();
             } else {
                 location.hash = '#account';
             }
@@ -747,7 +782,9 @@ async function saveProfile(e) {
         currentUser = await api.updateProfile(data);
         document.getElementById('navUser').textContent = currentUser.name;
         populateProfile();
-        showMsg('profileMsg', 'Profile updated.', 'success');
+        showMsg('profileMsg', currentUser.pending_email
+            ? `Check ${currentUser.pending_email} for a confirmation link. Your email changes once you click it.`
+            : 'Profile updated.', 'success');
     } catch (err) {
         showMsg('profileMsg', err.message, 'error');
     }
@@ -892,12 +929,16 @@ function renderUsers() {
                 <td>${nameHtml}${u.must_change_password ? ' <span class="badge" style="background:#fff3e0;color:#e65100;">temp pw</span>' : ''}<br><span class="mono" style="font-size:0.75rem;color:#888;">${esc(u.email)}</span></td>
                 <td>${isEditing ? roleEditor : roleDisplay}</td>
                 <td>${dietStatus}</td>
-                <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '<span style="font-size:0.8rem;color:#888;">never</span>'}</td>
+                <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '<span style="font-size:0.8rem;color:#888;">never</span>'}${u.invite_pending_until ? `<br><span class="badge" style="background:#e3f2fd;color:#1565c0;">invite pending · until ${new Date(u.invite_pending_until).toLocaleDateString()}</span>` : ''}</td>
                 <td>${isEditing
                     ? `<button class="btn-small" onclick="saveRole('${u.id}')">Save</button>
                        <button class="btn-secondary btn-small" onclick="cancelEditRole()">Cancel</button>`
                     : `<button class="btn-secondary btn-small" onclick="editRole('${u.id}')">Edit</button>
-                       <button class="btn-secondary btn-small" onclick="promptTempPassword('${u.id}', '${esc(u.name).replace(/'/g, "\\'")}')">Set password</button>`}</td>
+                       ${u.last_login_at
+                           ? `<button class="btn-secondary btn-small" onclick="sendReset('${u.id}')">Send reset link</button>`
+                           : `<button class="btn-secondary btn-small" onclick="resendInvite('${u.id}')">${u.invite_pending_until ? 'Resend invite' : 'Send invite'}</button>`}
+                       <button class="btn-secondary btn-small" onclick="signOutUser('${u.id}')">Sign out</button>
+                       <button class="btn-secondary btn-small" title="Fallback while email is unavailable" onclick="promptTempPassword('${u.id}', '${esc(u.name).replace(/'/g, "\\'")}')">Temp password</button>`}</td>
             </tr>
         `;
     }).join('');
@@ -1097,13 +1138,103 @@ async function forceChangePassword(e) {
         document.getElementById('navAccount').classList.remove('hidden');
         document.getElementById('navUser').textContent = currentUser.name;
         const isAdmin = currentUser.role === 'admin';
-        document.getElementById('navUsers').classList.toggle('hidden', !isAdmin);
+        document.getElementById('navUsers').classList.toggle('hidden', !canInvite());
         document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
         document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
         populateProfile();
         route();
     } catch (err) {
         showMsg('pwChangeMsg', err.message, 'error');
+    }
+}
+
+// ── Emailed invitations & resets ───────────────────
+
+function canInvite() {
+    return !!currentUser && ['admin', 'content_manager'].includes(currentUser.role);
+}
+
+function userById(id) { return allUsers.find(u => u.id === id) || {}; }
+
+// sent=false means the Registry has EMAIL_ENABLED off: the link was only written to its log.
+function emailResultMsg(msgId, what, res) {
+    if (res && res.sent === false) {
+        showMsg(msgId, `${what} created, but NOT emailed: email sending is off on the Registry. The link is only in the server log.`, 'error');
+    } else {
+        showMsg(msgId, `${what} emailed to ${res.email}.`, 'success');
+    }
+}
+
+function populateInviteRoles() {
+    const sel = document.getElementById('inviteRole');
+    const mine = ROLE_HIERARCHY.findIndex(r => r.value === currentUser.role);
+    sel.innerHTML = ROLE_HIERARCHY.filter((r, i) => i <= mine)
+        .map(r => `<option value="${r.value}"${r.value === 'full_view' ? ' selected' : ''}>${r.label}</option>`).join('');
+}
+
+async function inviteUser(e) {
+    e.preventDefault();
+    clearMsg('inviteMsg');
+    const btn = document.getElementById('inviteBtn');
+    btn.disabled = true;
+    try {
+        const res = await api.inviteUser({
+            name: document.getElementById('inviteName').value.trim(),
+            email: document.getElementById('inviteEmail').value.trim(),
+            role: document.getElementById('inviteRole').value,
+            compassEntityId: document.getElementById('inviteEntity').value.trim(),
+        });
+        emailResultMsg('inviteMsg', 'Invitation', { sent: res.sent, email: res.user.email });
+        e.target.reset();
+        populateInviteRoles();
+        if (currentUser.role === 'admin') loadUsers();
+    } catch (err) {
+        showMsg('inviteMsg', err.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function resendInvite(userId) {
+    clearMsg('usersMsg');
+    try {
+        emailResultMsg('usersMsg', 'A new invitation', await api.resendInvite(userId));
+        loadUsers();
+    } catch (err) {
+        showMsg('usersMsg', err.message, 'error');
+    }
+}
+
+async function sendReset(userId) {
+    if (!confirm(`Email a password reset link to ${userById(userId).email}?`)) return;
+    clearMsg('usersMsg');
+    try {
+        emailResultMsg('usersMsg', 'A password reset link', await api.sendPasswordReset(userId));
+    } catch (err) {
+        showMsg('usersMsg', err.message, 'error');
+    }
+}
+
+async function signOutUser(userId) {
+    const u = userById(userId);
+    if (!confirm(`Sign ${u.name} out on every device? They will need to sign in again.`)) return;
+    clearMsg('usersMsg');
+    try {
+        await api.signOutUser(userId);
+        if (userId === currentUser.id) { doLogout(); return; }
+        showMsg('usersMsg', `${u.name} was signed out everywhere.`, 'success');
+    } catch (err) {
+        showMsg('usersMsg', err.message, 'error');
+    }
+}
+
+async function signOutEverywhere() {
+    if (!confirm('Sign out on every device, including this one?')) return;
+    try {
+        await api.signOutEverywhere();
+        doLogout();
+    } catch (err) {
+        showMsg('sessionsMsg', err.message, 'error');
     }
 }
 
