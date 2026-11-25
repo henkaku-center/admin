@@ -294,6 +294,42 @@
       margin-bottom: 16px;
     }
 
+    /* ── Traffic ─────────────────────────────────────── */
+
+    .traffic-controls { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px; font-size:0.85rem; }
+    .traffic-controls select { padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px; }
+    .traffic-controls label { display:flex; gap:6px; align-items:center; color:#444; }
+    .stat-row { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:20px; }
+    .stat { border:1px solid #eee; border-radius:6px; padding:12px 14px; }
+    .stat .num { font-size:1.5rem; font-weight:600; font-variant-numeric:tabular-nums; }
+    .stat .lbl { font-size:0.75rem; color:#666; text-transform:uppercase; letter-spacing:0.03em; }
+    .daily { display:flex; align-items:flex-end; gap:2px; height:64px; margin-bottom:4px; }
+    .daily div { flex:1; background:#3949ab; opacity:0.75; min-height:1px; border-radius:2px 2px 0 0; }
+    .daily div:hover { opacity:1; }
+    .daily-axis { display:flex; justify-content:space-between; font-size:0.7rem; color:#888; margin-bottom:20px; }
+    .subtabs { display:flex; gap:4px; border-bottom:1px solid #eee; margin-bottom:16px; }
+    .subtabs button { background:none; color:#666; border-radius:0; padding:8px 14px; border-bottom:2px solid transparent; }
+    .subtabs button:hover { background:none; color:#111; }
+    .subtabs button.active { color:#111; font-weight:600; border-bottom-color:#111; }
+    .cat-block { margin-bottom:28px; }
+    .cat-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:6px; }
+    .cat-head h3 { margin:0 !important; font-size:1rem !important; color:#111 !important; }
+    .cat-head .meta { font-size:0.8rem; color:#666; }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+    .chip { font-size:0.75rem; background:#f1f1f1; border-radius:10px; padding:2px 10px; color:#444; }
+    .num-col { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .traffic-table td:nth-child(4) { overflow-wrap:normal; }
+    .traffic-table td { vertical-align:top; }
+    .page-title { font-weight:500; }
+    .page-url { font-size:0.75rem; color:#888; overflow-wrap:anywhere; }
+    .page-url a { color:#888; }
+    .who-anon { color:#888; }
+    .linkish { color:#3949ab; cursor:pointer; }
+    .linkish:hover { text-decoration:underline; }
+    .side-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:8px; }
+    .filter-note { font-size:0.8rem; background:#e8eaf6; color:#3949ab; padding:6px 10px; border-radius:4px; margin-bottom:12px; display:flex; justify-content:space-between; }
+    @media (max-width: 700px) { .stat-row { grid-template-columns:repeat(2, 1fr); } .side-grid { grid-template-columns:1fr; } }
+
     /* ── Hidden ───────────────────────────────────────── */
 
     .hidden { display: none !important; }
@@ -307,6 +343,7 @@
       .section { padding: 16px; }
     }
   </style>
+  <script defer src="https://registry.henkaku.center/api/v1/traffic/t.js"></script>
 </head>
 <body>
 
@@ -321,6 +358,7 @@
     <a href="#users" id="navUsers" class="hidden">Users</a>
     <a href="#invites" id="navInvites" class="hidden">Invites</a>
     <a href="#activity" id="navActivity" class="hidden">Activity</a>
+    <a href="#traffic" id="navTraffic" class="hidden">Traffic</a>
   </div>
   <div class="nav-right">
     <span id="navUser"></span>
@@ -521,6 +559,69 @@
     </div>
   </div>
 
+  <!-- Traffic page (admin only) -->
+  <div id="pageTraffic" class="container hidden">
+    <div class="section">
+      <h2>Website traffic</h2>
+      <div id="trafficMsg"></div>
+      <div class="traffic-controls">
+        <select id="trafficDays" onchange="loadTraffic()">
+          <option value="1">Last 24 hours</option>
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last year</option>
+          <option value="0">All time</option>
+        </select>
+        <label><input type="checkbox" id="trafficExcludeMe" checked onchange="loadTraffic()"> Exclude my own visits</label>
+        <label><input type="checkbox" id="trafficBots" onchange="loadTraffic()"> Include bots</label>
+      </div>
+      <div class="stat-row" id="trafficStats"></div>
+      <div class="daily" id="trafficDaily"></div>
+      <div class="daily-axis" id="trafficDailyAxis"></div>
+
+      <div class="subtabs">
+        <button id="trafficTabPages" class="active" onclick="showTrafficTab('pages')">Pages</button>
+        <button id="trafficTabVisits" onclick="showTrafficTab('visits')">Recent visits</button>
+        <button id="trafficTabVisitors" onclick="showTrafficTab('visitors')">Visitors</button>
+      </div>
+
+      <div id="trafficPanePages"></div>
+
+      <div id="trafficPaneVisits" class="hidden">
+        <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; font-size:0.85rem;">
+          <select id="visitsCategory" onchange="loadVisits()" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
+            <option value="">All categories</option>
+          </select>
+          <select id="visitsSite" onchange="loadVisits()" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
+            <option value="">All sites</option>
+          </select>
+        </div>
+        <div id="visitsFilterNote"></div>
+        <div class="table-wrap">
+          <table class="traffic-table">
+            <thead><tr><th>Time</th><th>Who</th><th>Page</th><th>From</th><th>Device</th><th class="num-col">Time on page</th></tr></thead>
+            <tbody id="visitsBody"></tbody>
+          </table>
+        </div>
+        <div id="visitsPagination" style="margin-top:16px; text-align:center;"></div>
+      </div>
+
+      <div id="trafficPaneVisitors" class="hidden">
+        <label style="font-size:0.85rem; display:flex; gap:6px; align-items:center; margin-bottom:12px; color:#444;">
+          <input type="checkbox" id="visitorsIdentified" onchange="loadVisitors()"> Identified only
+        </label>
+        <div class="table-wrap">
+          <table class="traffic-table">
+            <thead><tr><th>Who</th><th class="num-col">Views</th><th class="num-col">Sessions</th><th>Sites</th><th>Last seen</th><th>First seen</th><th>Device</th></tr></thead>
+            <tbody id="visitorsBody"></tbody>
+          </table>
+        </div>
+        <div id="visitorsPagination" style="margin-top:16px; text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Activity page (admin only) -->
   <div id="pageActivity" class="container hidden">
     <div class="section">
@@ -672,6 +773,7 @@ async function bootstrap() {
     document.getElementById('navUsers').classList.toggle('hidden', !canInvite());
     document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
     document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navTraffic').classList.toggle('hidden', !isAdmin);
 
     populateProfile();
     route();
@@ -681,7 +783,7 @@ async function bootstrap() {
 
 function route() {
     const hash = location.hash.replace('#', '') || 'account';
-    const pages = ['pageAccount', 'pageUsers', 'pageInvites', 'pageActivity'];
+    const pages = ['pageAccount', 'pageUsers', 'pageInvites', 'pageActivity', 'pageTraffic'];
     pages.forEach(p => document.getElementById(p).classList.add('hidden'));
 
     document.querySelectorAll('#navLinks a').forEach(a => {
@@ -705,6 +807,14 @@ function route() {
             if (isAdmin) {
                 document.getElementById('pageInvites').classList.remove('hidden');
                 loadInvites();
+            } else {
+                location.hash = '#account';
+            }
+            break;
+        case 'traffic':
+            if (isAdmin) {
+                document.getElementById('pageTraffic').classList.remove('hidden');
+                loadTraffic();
             } else {
                 location.hash = '#account';
             }
@@ -1116,6 +1226,257 @@ function renderActivity(items, total, append) {
     }
 }
 
+// ── Website traffic (admin) ─────────────────────────
+
+// Attribute-safe escaping: page views arrive from an unauthenticated beacon, so titles,
+// paths and referrers are untrusted and may contain quotes.
+function ea(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Person / visitor links in the traffic tables
+document.addEventListener('click', e => {
+    const el = e.target.closest('#pageTraffic [data-user], #pageTraffic [data-visitor]');
+    if (!el) return;
+    if (el.dataset.user) filterVisitsByUser(el.dataset.user, el.dataset.label);
+    else filterVisitsByVisitor(el.dataset.visitor, el.dataset.label);
+});
+
+const TRAFFIC_LIMIT = 50;
+const PAGES_SHOWN = 10;
+let trafficSummary = null;
+let trafficTab = 'pages';
+let visitsOffset = 0;
+let visitorsOffset = 0;
+let visitsVisitor = null;   // { id, label } when filtering recent visits to one visitor
+let visitsUser = null;      // { id, label } when filtering to one person
+
+function trafficParams() {
+    const params = { days: document.getElementById('trafficDays').value };
+    if (document.getElementById('trafficExcludeMe').checked && currentUser) params.exclude_user = currentUser.id;
+    if (document.getElementById('trafficBots').checked) params.include_bots = true;
+    return params;
+}
+
+function fmtNum(n) { return (n || 0).toLocaleString(); }
+
+function fmtDuration(ms) {
+    if (ms === null || ms === undefined) return '—';
+    const s = Math.round(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    return m < 60 ? `${m}m ${String(s % 60).padStart(2, '0')}s` : `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+function fmtTime(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function whoLabel(user, visitorId) {
+    if (user) return `<span title="${ea(user.email || '')}">${ea(user.name || user.email || user.user_id)}</span>`;
+    return `<span class="who-anon">Anonymous · ${ea((visitorId || '').slice(0, 8))}</span>`;
+}
+
+async function loadTraffic() {
+    clearMsg('trafficMsg');
+    try {
+        trafficSummary = await api.getTraffic('summary', trafficParams());
+    } catch (err) {
+        showMsg('trafficMsg', err.message, 'error');
+        return;
+    }
+    renderTrafficStats(trafficSummary);
+    renderTrafficPages(trafficSummary);
+    populateVisitFilters(trafficSummary);
+    if (trafficTab === 'visits') loadVisits();
+    if (trafficTab === 'visitors') loadVisitors();
+}
+
+function renderTrafficStats(s) {
+    const t = s.totals;
+    document.getElementById('trafficStats').innerHTML = [
+        ['Page views', t.views], ['Visitors', t.visitors], ['Identified people', t.identified], ['Sessions', t.sessions],
+    ].map(([lbl, n]) => `<div class="stat"><div class="num">${fmtNum(n)}</div><div class="lbl">${lbl}</div></div>`).join('');
+
+    const daily = s.daily || [];
+    const max = Math.max(1, ...daily.map(d => d.views));
+    document.getElementById('trafficDaily').innerHTML = daily.map(d =>
+        `<div style="height:${Math.max(2, d.views / max * 100)}%" title="${ea(d.date)}: ${d.views} views, ${d.visitors} visitors"></div>`
+    ).join('');
+    document.getElementById('trafficDailyAxis').innerHTML = daily.length
+        ? `<span>${ea(daily[0].date)}</span><span>views per day (peak ${fmtNum(max)})</span><span>${ea(daily[daily.length - 1].date)}</span>`
+        : '<span>No traffic recorded in this period yet.</span>';
+}
+
+function renderTrafficPages(s) {
+    const blocks = s.categories.map(cat => {
+        const chips = cat.sites.map(site =>
+            `<span class="chip">${ea(site.label)} · ${fmtNum(site.views)}</span>`).join('');
+        const rows = cat.pages.map((p, i) => `<tr class="${i >= PAGES_SHOWN ? 'more-' + cat.category + ' hidden' : ''}">
+            <td><div class="page-title">${ea(p.title || p.path)}</div>
+                <div class="page-url"><a href="${ea(p.url)}" target="_blank" rel="noopener">${ea(p.host + p.path)}</a></div></td>
+            <td style="font-size:0.8rem;">${ea(p.site_label)}</td>
+            <td class="num-col">${fmtNum(p.views)}</td>
+            <td class="num-col">${fmtNum(p.visitors)}</td>
+            <td class="num-col">${p.identified ? fmtNum(p.identified) : '—'}</td>
+            <td class="num-col">${fmtDuration(p.avg_duration_ms)}</td>
+            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(p.last_seen)}</td>
+        </tr>`).join('');
+        const more = cat.pages.length > PAGES_SHOWN
+            ? `<div style="margin-top:8px;"><span class="linkish" style="font-size:0.8rem;" onclick="document.querySelectorAll('.more-${cat.category}').forEach(r => r.classList.remove('hidden')); this.remove();">Show all ${cat.pages.length} pages</span></div>`
+            : '';
+        const body = cat.pages.length
+            ? `<div class="table-wrap"><table class="traffic-table">
+                <thead><tr><th>Page</th><th>Site</th><th class="num-col">Views</th><th class="num-col">Visitors</th><th class="num-col">Identified</th><th class="num-col">Avg time</th><th>Last view</th></tr></thead>
+                <tbody>${rows}</tbody></table></div>${more}`
+            : '<div style="font-size:0.85rem; color:#888;">No views in this period.</div>';
+        return `<div class="cat-block">
+            <div class="cat-head"><h3>${ea(cat.label)}</h3>
+                <span class="meta">${fmtNum(cat.views)} views · ${fmtNum(cat.visitors)} visitors · ${fmtNum(cat.identified)} identified</span></div>
+            ${chips ? `<div class="chips">${chips}</div>` : ''}
+            ${body}
+        </div>`;
+    }).join('');
+
+    const people = s.people.length
+        ? `<table class="traffic-table"><tbody>${s.people.map(p => `<tr>
+            <td><span class="linkish" data-user="${ea(p.user_id)}" data-label="${ea(p.name || p.email || '')}">${ea(p.name || p.email || p.user_id)}</span></td>
+            <td class="num-col">${fmtNum(p.views)} views</td><td class="num-col">${p.sites} site${p.sites === 1 ? '' : 's'}</td>
+            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(p.last_seen)}</td></tr>`).join('')}</tbody></table>`
+        : '<div style="font-size:0.85rem; color:#888;">Nobody identified yet. Visitors are identified once they sign in on any site with the same browser.</div>';
+    const refs = s.referrers.length
+        ? `<table class="traffic-table"><tbody>${s.referrers.map(r =>
+            `<tr><td>${ea(r.host)}</td><td class="num-col">${fmtNum(r.views)}</td></tr>`).join('')}</tbody></table>`
+        : '<div style="font-size:0.85rem; color:#888;">No outside referrers yet.</div>';
+    const devices = Object.entries(s.devices).sort((a, b) => b[1] - a[1])
+        .map(([d, n]) => `<span class="chip">${ea(d)} · ${fmtNum(n)}</span>`).join('');
+
+    document.getElementById('trafficPanePages').innerHTML = blocks + `
+        <div class="side-grid">
+            <div><h3>Identified people</h3>${people}</div>
+            <div><h3>Outside referrers</h3>${refs}<h3>Devices</h3><div class="chips">${devices || '—'}</div></div>
+        </div>`;
+}
+
+function populateVisitFilters(s) {
+    const catSel = document.getElementById('visitsCategory');
+    const siteSel = document.getElementById('visitsSite');
+    const keepCat = catSel.value, keepSite = siteSel.value;
+    catSel.innerHTML = '<option value="">All categories</option>' +
+        s.categories.map(c => `<option value="${ea(c.category)}">${ea(c.label)}</option>`).join('');
+    const sites = {};
+    s.categories.forEach(c => c.sites.forEach(site => { sites[site.site] = site.label; }));
+    siteSel.innerHTML = '<option value="">All sites</option>' +
+        Object.entries(sites).sort((a, b) => a[1].localeCompare(b[1]))
+            .map(([k, label]) => `<option value="${ea(k)}">${ea(label)}</option>`).join('');
+    catSel.value = keepCat;
+    siteSel.value = sites[keepSite] ? keepSite : '';
+}
+
+function showTrafficTab(tab) {
+    trafficTab = tab;
+    ['pages', 'visits', 'visitors'].forEach(t => {
+        const key = t.charAt(0).toUpperCase() + t.slice(1);
+        document.getElementById('trafficPane' + key).classList.toggle('hidden', t !== tab);
+        document.getElementById('trafficTab' + key).classList.toggle('active', t === tab);
+    });
+    if (tab === 'visits') loadVisits();
+    if (tab === 'visitors') loadVisitors();
+}
+
+function filterVisitsByUser(userId, label) {
+    visitsUser = { id: userId, label };
+    visitsVisitor = null;
+    showTrafficTab('visits');
+}
+
+function filterVisitsByVisitor(visitorId, label) {
+    visitsVisitor = { id: visitorId, label };
+    visitsUser = null;
+    showTrafficTab('visits');
+}
+
+function clearVisitsFilter() {
+    visitsUser = null;
+    visitsVisitor = null;
+    loadVisits();
+}
+
+async function loadVisits(append = false) {
+    if (!append) visitsOffset = 0;
+    const params = { ...trafficParams(), limit: TRAFFIC_LIMIT, offset: visitsOffset,
+        category: document.getElementById('visitsCategory').value,
+        site: document.getElementById('visitsSite').value };
+    if (visitsUser) params.user_id = visitsUser.id;
+    if (visitsVisitor) params.visitor_id = visitsVisitor.id;
+    const who = visitsUser || visitsVisitor;
+    document.getElementById('visitsFilterNote').innerHTML = who
+        ? `<div class="filter-note"><span>Showing visits by ${ea(who.label)}</span><span class="linkish" onclick="clearVisitsFilter()">Show everyone</span></div>`
+        : '';
+    let data;
+    try {
+        data = await api.getTraffic('views', params);
+    } catch (err) {
+        showMsg('trafficMsg', err.message, 'error');
+        return;
+    }
+    const tbody = document.getElementById('visitsBody');
+    if (!append) tbody.innerHTML = '';
+    tbody.innerHTML += data.items.map(v => {
+        const whoLink = v.user
+            ? `<span class="linkish" data-user="${ea(v.user.user_id)}" data-label="${ea(v.user.name || v.user.email || '')}">${whoLabel(v.user)}</span>${v.identified_by === 'visitor' ? ' <span title="Signed in on another visit from this browser" style="color:#888;font-size:0.75rem;">(same browser)</span>' : ''}`
+            : `<span class="linkish" data-visitor="${ea(v.visitor_id)}" data-label="visitor ${ea(v.visitor_id.slice(0, 8))}">${whoLabel(null, v.visitor_id)}</span>`;
+        const ref = v.referrer ? (() => { try { return new URL(v.referrer).hostname; } catch { return v.referrer; } })() : '';
+        const utm = v.utm ? Object.entries(v.utm).map(([k, val]) => `${k}=${val}`).join(' ') : '';
+        return `<tr>
+            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(v.timestamp)}</td>
+            <td style="font-size:0.8rem;">${whoLink}<div class="page-url" title="${ea(v.user_agent || '')}">${ea(v.ip_address || '')}${v.timezone ? ' · ' + ea(v.timezone) : ''}</div></td>
+            <td><div class="page-title" style="font-size:0.85rem;">${ea(v.title || v.path)}</div>
+                <div class="page-url"><a href="${ea(v.url)}" target="_blank" rel="noopener">${ea(v.host + v.path)}</a></div></td>
+            <td style="font-size:0.8rem;" title="${ea(v.referrer || '')}">${ea(ref) || '—'}${utm ? `<div class="page-url">${ea(utm)}</div>` : ''}</td>
+            <td style="font-size:0.8rem;">${ea([v.device, v.browser, v.os].filter(Boolean).join(' · '))}</td>
+            <td class="num-col" style="font-size:0.8rem;">${fmtDuration(v.duration_ms)}${v.scroll_pct !== null ? `<div class="page-url">${v.scroll_pct}% scrolled</div>` : ''}</td>
+        </tr>`;
+    }).join('');
+    const loaded = visitsOffset + data.items.length;
+    document.getElementById('visitsPagination').innerHTML = loaded < data.total
+        ? `<button class="btn-secondary btn-small" onclick="visitsOffset=${loaded};loadVisits(true)">Load more (${loaded}/${data.total})</button>`
+        : `<span style="font-size:0.8rem;color:#888;">${fmtNum(data.total)} views</span>`;
+}
+
+async function loadVisitors(append = false) {
+    if (!append) visitorsOffset = 0;
+    const params = { ...trafficParams(), limit: TRAFFIC_LIMIT, offset: visitorsOffset,
+        identified_only: document.getElementById('visitorsIdentified').checked };
+    let data;
+    try {
+        data = await api.getTraffic('visitors', params);
+    } catch (err) {
+        showMsg('trafficMsg', err.message, 'error');
+        return;
+    }
+    const tbody = document.getElementById('visitorsBody');
+    if (!append) tbody.innerHTML = '';
+    tbody.innerHTML += data.items.map(v => {
+        const label = v.user ? (v.user.name || v.user.email || '') : `visitor ${v.visitor_id.slice(0, 8)}`;
+        return `<tr>
+            <td style="font-size:0.8rem;"><span class="linkish" data-visitor="${ea(v.visitor_id)}" data-label="${ea(label)}">${whoLabel(v.user, v.visitor_id)}</span>
+                <div class="page-url">${ea(v.last_ip || '')}${v.timezone ? ' · ' + ea(v.timezone) : ''}${v.language ? ' · ' + ea(v.language) : ''}</div></td>
+            <td class="num-col">${fmtNum(v.views)}</td>
+            <td class="num-col">${fmtNum(v.sessions)}</td>
+            <td style="font-size:0.8rem;">${ea(v.sites.join(', '))}</td>
+            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(v.last_seen)}</td>
+            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(v.first_seen)}</td>
+            <td style="font-size:0.8rem;">${ea([v.device, v.browser, v.os].filter(Boolean).join(' · '))}</td>
+        </tr>`;
+    }).join('');
+    const loaded = visitorsOffset + data.items.length;
+    document.getElementById('visitorsPagination').innerHTML = loaded < data.total
+        ? `<button class="btn-secondary btn-small" onclick="visitorsOffset=${loaded};loadVisitors(true)">Load more (${loaded}/${data.total})</button>`
+        : `<span style="font-size:0.8rem;color:#888;">${fmtNum(data.total)} visitors</span>`;
+}
+
 // ── Force password change ───────────────────────────
 
 async function forceChangePassword(e) {
@@ -1141,6 +1502,7 @@ async function forceChangePassword(e) {
         document.getElementById('navUsers').classList.toggle('hidden', !canInvite());
         document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
         document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navTraffic').classList.toggle('hidden', !isAdmin);
         populateProfile();
         route();
     } catch (err) {

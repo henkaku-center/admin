@@ -36,6 +36,7 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 | Users | Admins only | List all users with roles and last login |
 | Invites | Admins only | Create and view invite codes |
 | Activity | Admins only | Activity log — logins, entity views, writes (filterable by user, method, path) |
+| Traffic | Admins only | Website traffic across every site: totals, views per day, pages grouped by category (institutional, courses, projects, individuals, platform), recent visits and visitors with identity. Page data comes from an unauthenticated beacon, so render it with `ea()` (attribute-safe), never `esc()` |
 
 ### Registry endpoints used
 
@@ -49,6 +50,7 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 | `/api/v1/auth/users` | GET | List all users (admin) |
 | `/api/v1/auth/invite-codes` | GET/POST | List/create invite codes (admin) |
 | `/api/v1/activity` | GET | Activity log with filters (admin) |
+| `/api/v1/traffic/summary`, `/views`, `/visitors` | GET | Website traffic reports (admin) |
 | `/api/v1/auth/invitations` | POST | Invite a user (Users page; content managers see only this form) |
 | `/api/v1/auth/users/{id}/invitation` | POST | Resend invite (never-signed-in users) |
 | `/api/v1/auth/users/{id}/password-reset` | POST | Email a reset link (admin) |

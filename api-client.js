@@ -171,6 +171,17 @@ class ApiClient {
         return this._fetch(`/api/v1/activity${query}`);
     }
 
+    // ── Website traffic ──────────────────────────────────────
+
+    async getTraffic(kind, params = {}) {
+        const qs = new URLSearchParams();
+        for (const [k, v] of Object.entries(params)) {
+            if (v !== undefined && v !== null && v !== '' && v !== false) qs.set(k, v);
+        }
+        const query = qs.toString() ? `?${qs}` : '';
+        return this._fetch(`/api/v1/traffic/${kind}${query}`);
+    }
+
     // ── Internal ──────────────────────────────────────────────
 
     _storeTokens(access, refresh) {
