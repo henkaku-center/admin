@@ -315,6 +315,23 @@
     .cat-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:6px; }
     .cat-head h3 { margin:0 !important; font-size:1rem !important; color:#111 !important; }
     .cat-head .meta { font-size:0.8rem; color:#666; }
+    .traffic-select { padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px; }
+    .crumbs { font-size:0.8rem; color:#888; margin-bottom:4px; min-height:1em; }
+    .crumbs a { color:#3949ab; text-decoration:none; }
+    .crumbs a:hover { text-decoration:underline; }
+    .crumbs .sep { margin:0 4px; }
+    #trafficHeading .ext, .sites-table .ext { color:#999; text-decoration:none; font-size:0.85em; margin-left:4px; }
+    a.page-link { color:#111; text-decoration:none; }
+    a.page-link:hover { color:#3949ab; text-decoration:underline; }
+    .muted { color:#888; }
+    .bar-row { display:grid; grid-template-columns:150px 1fr auto; gap:12px; align-items:center; font-size:0.85rem; padding:3px 0; }
+    .bar-track { background:#f1f1f1; border-radius:3px; height:10px; overflow:hidden; }
+    .bar-fill { display:block; height:100%; background:#3949ab; opacity:0.8; border-radius:3px; }
+    .bar-num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .group-row { cursor:pointer; }
+    .group-row .caret { display:inline-block; transition:transform 0.15s; color:#888; }
+    .group-row.open .caret { transform:rotate(90deg); }
+    .sub-row td:first-child { padding-left:28px; }
     .sites-table td, .sites-table th { padding:5px 10px; }
     .sites-table a { color:#111; text-decoration:none; }
     .sites-table a:hover { text-decoration:underline; }
@@ -563,10 +580,11 @@
     </div>
   </div>
 
-  <!-- Traffic page (admin only) -->
+  <!-- Traffic page (admin only). Sub-routes: #traffic, #traffic/site/<site>, #traffic/page/<site>/<path> -->
   <div id="pageTraffic" class="container hidden">
     <div class="section">
-      <h2>Website traffic</h2>
+      <div id="trafficCrumbs" class="crumbs"></div>
+      <h2 id="trafficHeading">Website traffic</h2>
       <div id="trafficMsg"></div>
       <div class="traffic-controls">
         <select id="trafficDays" onchange="loadTraffic()">
@@ -584,45 +602,50 @@
       <div class="daily" id="trafficDaily"></div>
       <div class="daily-axis" id="trafficDailyAxis"></div>
 
-      <div class="subtabs">
-        <button id="trafficTabPages" class="active" onclick="showTrafficTab('pages')">Pages</button>
-        <button id="trafficTabVisits" onclick="showTrafficTab('visits')">Recent visits</button>
-        <button id="trafficTabVisitors" onclick="showTrafficTab('visitors')">Visitors</button>
+      <!-- Overview -->
+      <div id="trafficOverview">
+        <div class="subtabs">
+          <button id="trafficTabPages" class="active" onclick="showTrafficTab('pages')">Pages</button>
+          <button id="trafficTabSources" onclick="showTrafficTab('sources')">Sources</button>
+          <button id="trafficTabVisits" onclick="showTrafficTab('visits')">Recent visits</button>
+          <button id="trafficTabVisitors" onclick="showTrafficTab('visitors')">Visitors</button>
+        </div>
+
+        <div id="trafficPanePages"></div>
+        <div id="trafficPaneSources" class="hidden"></div>
+
+        <div id="trafficPaneVisits" class="hidden">
+          <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; font-size:0.85rem;">
+            <select id="visitsCategory" class="traffic-select" onchange="loadVisits()"><option value="">All categories</option></select>
+            <select id="visitsSite" class="traffic-select" onchange="loadVisits()"><option value="">All sites</option></select>
+            <select id="visitsChannel" class="traffic-select" onchange="loadVisits()"><option value="">All sources</option></select>
+          </div>
+          <div id="visitsFilterNote"></div>
+          <div class="table-wrap">
+            <table class="traffic-table">
+              <thead><tr><th>Time</th><th>Who</th><th>Page</th><th>Source</th><th>Device</th><th class="num-col">Time on page</th></tr></thead>
+              <tbody id="visitsBody"></tbody>
+            </table>
+          </div>
+          <div id="visitsPagination" style="margin-top:16px; text-align:center;"></div>
+        </div>
+
+        <div id="trafficPaneVisitors" class="hidden">
+          <label style="font-size:0.85rem; display:flex; gap:6px; align-items:center; margin-bottom:12px; color:#444;">
+            <input type="checkbox" id="visitorsIdentified" onchange="loadVisitors()"> Identified only
+          </label>
+          <div class="table-wrap">
+            <table class="traffic-table">
+              <thead><tr><th>Who</th><th class="num-col">Views</th><th class="num-col">Sessions</th><th>Sites</th><th>Last seen</th><th>First seen</th><th>Device</th></tr></thead>
+              <tbody id="visitorsBody"></tbody>
+            </table>
+          </div>
+          <div id="visitorsPagination" style="margin-top:16px; text-align:center;"></div>
+        </div>
       </div>
 
-      <div id="trafficPanePages"></div>
-
-      <div id="trafficPaneVisits" class="hidden">
-        <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; font-size:0.85rem;">
-          <select id="visitsCategory" onchange="loadVisits()" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
-            <option value="">All categories</option>
-          </select>
-          <select id="visitsSite" onchange="loadVisits()" style="padding:4px 8px; font-size:0.85rem; font-family:inherit; border:1px solid #ccc; border-radius:3px;">
-            <option value="">All sites</option>
-          </select>
-        </div>
-        <div id="visitsFilterNote"></div>
-        <div class="table-wrap">
-          <table class="traffic-table">
-            <thead><tr><th>Time</th><th>Who</th><th>Page</th><th>From</th><th>Device</th><th class="num-col">Time on page</th></tr></thead>
-            <tbody id="visitsBody"></tbody>
-          </table>
-        </div>
-        <div id="visitsPagination" style="margin-top:16px; text-align:center;"></div>
-      </div>
-
-      <div id="trafficPaneVisitors" class="hidden">
-        <label style="font-size:0.85rem; display:flex; gap:6px; align-items:center; margin-bottom:12px; color:#444;">
-          <input type="checkbox" id="visitorsIdentified" onchange="loadVisitors()"> Identified only
-        </label>
-        <div class="table-wrap">
-          <table class="traffic-table">
-            <thead><tr><th>Who</th><th class="num-col">Views</th><th class="num-col">Sessions</th><th>Sites</th><th>Last seen</th><th>First seen</th><th>Device</th></tr></thead>
-            <tbody id="visitorsBody"></tbody>
-          </table>
-        </div>
-        <div id="visitorsPagination" style="margin-top:16px; text-align:center;"></div>
-      </div>
+      <!-- One site, or one page -->
+      <div id="trafficDetail" class="hidden"></div>
     </div>
   </div>
 
@@ -786,7 +809,8 @@ async function bootstrap() {
 // ── Routing ─────────────────────────────────────────
 
 function route() {
-    const hash = location.hash.replace('#', '') || 'account';
+    // Sub-routes (#traffic/site/sds) select their tab by the first segment
+    const hash = (location.hash.replace('#', '') || 'account').split('/')[0];
     const pages = ['pageAccount', 'pageUsers', 'pageInvites', 'pageActivity', 'pageTraffic'];
     pages.forEach(p => document.getElementById(p).classList.add('hidden'));
 
@@ -1231,6 +1255,7 @@ function renderActivity(items, total, append) {
 }
 
 // ── Website traffic (admin) ─────────────────────────
+// Routes: #traffic (overview), #traffic/site/<site>, #traffic/page/<site>/<encoded path>
 
 // Attribute-safe escaping: page views arrive from an unauthenticated beacon, so titles,
 // paths and referrers are untrusted and may contain quotes.
@@ -1252,8 +1277,20 @@ let trafficSummary = null;
 let trafficTab = 'pages';
 let visitsOffset = 0;
 let visitorsOffset = 0;
+let detailOffset = 0;
 let visitsVisitor = null;   // { id, label } when filtering recent visits to one visitor
 let visitsUser = null;      // { id, label } when filtering to one person
+
+function trafficRoute() {
+    const parts = location.hash.replace(/^#/, '').split('/');
+    if (parts[1] === 'site' && parts[2]) return { view: 'site', site: decodeURIComponent(parts[2]) };
+    if (parts[1] === 'page' && parts[2] && parts.length > 3) {
+        return { view: 'page', site: decodeURIComponent(parts[2]), path: decodeURIComponent(parts.slice(3).join('/')) };
+    }
+    return { view: 'overview' };
+}
+function siteHref(site) { return `#traffic/site/${encodeURIComponent(site)}`; }
+function pageHref(site, path) { return `#traffic/page/${encodeURIComponent(site)}/${encodeURIComponent(path)}`; }
 
 function trafficParams() {
     const params = { days: document.getElementById('trafficDays').value };
@@ -1282,28 +1319,42 @@ function whoLabel(user, visitorId) {
     return `<span class="who-anon">Anonymous · ${ea((visitorId || '').slice(0, 8))}</span>`;
 }
 
-async function loadTraffic() {
-    clearMsg('trafficMsg');
-    try {
-        trafficSummary = await api.getTraffic('summary', trafficParams());
-    } catch (err) {
-        showMsg('trafficMsg', err.message, 'error');
-        return;
-    }
-    renderTrafficStats(trafficSummary);
-    renderTrafficPages(trafficSummary);
-    populateVisitFilters(trafficSummary);
-    if (trafficTab === 'visits') loadVisits();
-    if (trafficTab === 'visitors') loadVisitors();
+function setCrumbs(items) {
+    document.getElementById('trafficCrumbs').innerHTML = items.map(([label, href]) =>
+        href ? `<a href="${ea(href)}">${ea(label)}</a>` : `<span>${ea(label)}</span>`).join(' <span class="sep">›</span> ');
 }
 
-function renderTrafficStats(s) {
-    const t = s.totals;
-    document.getElementById('trafficStats').innerHTML = [
-        ['Page views', t.views], ['Visitors', t.visitors], ['Identified people', t.identified], ['Sessions', t.sessions],
-    ].map(([lbl, n]) => `<div class="stat"><div class="num">${fmtNum(n)}</div><div class="lbl">${lbl}</div></div>`).join('');
+async function loadTraffic() {
+    clearMsg('trafficMsg');
+    const r = trafficRoute();
+    document.getElementById('trafficOverview').classList.toggle('hidden', r.view !== 'overview');
+    document.getElementById('trafficDetail').classList.toggle('hidden', r.view === 'overview');
+    try {
+        if (r.view === 'site') await loadSiteView(r.site);
+        else if (r.view === 'page') await loadPageView(r.site, r.path);
+        else await loadOverview();
+    } catch (err) {
+        showMsg('trafficMsg', err.message, 'error');
+    }
+}
 
-    const daily = s.daily || [];
+async function loadOverview() {
+    setCrumbs([]);
+    document.getElementById('trafficHeading').textContent = 'Website traffic';
+    trafficSummary = await api.getTraffic('summary', trafficParams());
+    renderTrafficStats(trafficSummary.totals, trafficSummary.daily);
+    renderTrafficPages(trafficSummary);
+    document.getElementById('trafficPaneSources').innerHTML = sourcesHtml(trafficSummary, 'across all sites');
+    populateVisitFilters(trafficSummary);
+    showTrafficTab(trafficTab);
+}
+
+function renderTrafficStats(t, daily, last = ['Sessions', fmtNum(t.sessions)]) {
+    document.getElementById('trafficStats').innerHTML = [
+        ['Page views', fmtNum(t.views)], ['Visitors', fmtNum(t.visitors)], ['Identified people', fmtNum(t.identified)], last,
+    ].map(([lbl, n]) => `<div class="stat"><div class="num">${n}</div><div class="lbl">${lbl}</div></div>`).join('');
+
+    daily = daily || [];
     const max = Math.max(1, ...daily.map(d => d.views));
     document.getElementById('trafficDaily').innerHTML = daily.map(d =>
         `<div style="height:${Math.max(2, d.views / max * 100)}%" title="${ea(d.date)}: ${d.views} views, ${d.visitors} visitors"></div>`
@@ -1313,10 +1364,16 @@ function renderTrafficStats(s) {
         : '<span>No traffic recorded in this period yet.</span>';
 }
 
+function pageTitleCell(p) {
+    return `<td><a class="page-title page-link" href="${ea(pageHref(p.site, p.path))}">${ea(p.title || p.path)}</a>
+        <div class="page-url"><a href="${ea(p.url)}" target="_blank" rel="noopener">${ea(p.host + p.path)} ↗</a></div></td>`;
+}
+
 function renderTrafficPages(s) {
     const blocks = s.categories.map(cat => {
         const siteRows = cat.sites.map(site => `<tr class="${site.views ? '' : 'site-quiet'}">
-            <td>${site.url ? `<a href="${ea(site.url)}" target="_blank" rel="noopener">${ea(site.label)}</a>` : ea(site.label)}</td>
+            <td><a class="page-link" href="${ea(siteHref(site.site))}">${ea(site.label)}</a>
+                ${site.url ? `<a class="ext" href="${ea(site.url)}" target="_blank" rel="noopener" title="Open the site">↗</a>` : ''}</td>
             <td class="num-col">${site.views ? fmtNum(site.views) : 'No views yet'}</td>
             <td class="num-col">${site.views ? fmtNum(site.visitors) : ''}</td>
             <td class="num-col">${site.identified ? fmtNum(site.identified) : ''}</td>
@@ -1327,8 +1384,7 @@ function renderTrafficPages(s) {
                 <tbody>${siteRows}</tbody></table></div>`
             : '';
         const rows = cat.pages.map((p, i) => `<tr class="${i >= PAGES_SHOWN ? 'more-' + cat.category + ' hidden' : ''}">
-            <td><div class="page-title">${ea(p.title || p.path)}</div>
-                <div class="page-url"><a href="${ea(p.url)}" target="_blank" rel="noopener">${ea(p.host + p.path)}</a></div></td>
+            ${pageTitleCell(p)}
             <td style="font-size:0.8rem;">${ea(p.site_label)}</td>
             <td class="num-col">${fmtNum(p.views)}</td>
             <td class="num-col">${fmtNum(p.visitors)}</td>
@@ -1358,24 +1414,149 @@ function renderTrafficPages(s) {
             <td class="num-col">${fmtNum(p.views)} views</td><td class="num-col">${p.sites} site${p.sites === 1 ? '' : 's'}</td>
             <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(p.last_seen)}</td></tr>`).join('')}</tbody></table>`
         : '<div style="font-size:0.85rem; color:#888;">Nobody identified yet. Visitors are identified once they sign in on any site with the same browser.</div>';
-    const refs = s.referrers.length
-        ? `<table class="traffic-table"><tbody>${s.referrers.map(r =>
-            `<tr><td>${ea(r.host)}</td><td class="num-col">${fmtNum(r.views)}</td></tr>`).join('')}</tbody></table>`
-        : '<div style="font-size:0.85rem; color:#888;">No outside referrers yet.</div>';
     const devices = Object.entries(s.devices).sort((a, b) => b[1] - a[1])
         .map(([d, n]) => `<span class="chip">${ea(d)} · ${fmtNum(n)}</span>`).join('');
 
     document.getElementById('trafficPanePages').innerHTML = blocks + `
         <div class="side-grid">
             <div><h3>Identified people</h3>${people}</div>
-            <div><h3>Outside referrers</h3>${refs}<h3>Devices</h3><div class="chips">${devices || '—'}</div></div>
+            <div><h3>Devices</h3><div class="chips">${devices || '—'}</div></div>
         </div>`;
 }
+
+// Where visitors came from: channel bars, referring sites, tagged campaigns
+function sourcesHtml(data, scope) {
+    const arrivals = data.channels.filter(c => c.channel !== 'internal');
+    const internal = data.channels.find(c => c.channel === 'internal');
+    const total = arrivals.reduce((n, c) => n + c.views, 0);
+    const max = Math.max(1, ...arrivals.map(c => c.views));
+    const bars = total
+        ? arrivals.filter(c => c.views).sort((a, b) => b.views - a.views).map(c => `<div class="bar-row">
+            <span class="bar-label"><span class="linkish" onclick="filterVisitsByChannel('${ea(c.channel)}')">${ea(c.label)}</span></span>
+            <span class="bar-track"><span class="bar-fill" style="width:${c.views / max * 100}%"></span></span>
+            <span class="bar-num">${fmtNum(c.views)} <span class="muted">· ${Math.round(c.views / total * 100)}% · ${fmtNum(c.visitors)} visitors</span></span>
+          </div>`).join('')
+        : '<div class="muted" style="font-size:0.85rem;">No arrivals in this period.</div>';
+    const internalNote = internal && internal.views
+        ? `<p class="muted" style="font-size:0.8rem; margin-top:8px;">Plus ${fmtNum(internal.views)} views reached by clicking from another page of the same site.</p>` : '';
+    const refs = data.referrers.length
+        ? `<table class="traffic-table"><thead><tr><th>Site</th><th>Type</th><th class="num-col">Views</th><th class="num-col">Visitors</th></tr></thead><tbody>
+            ${data.referrers.map(r => `<tr><td>${ea(r.host)}</td><td style="font-size:0.8rem;">${ea(r.channel_label)}</td>
+                <td class="num-col">${fmtNum(r.views)}</td><td class="num-col">${fmtNum(r.visitors)}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="muted" style="font-size:0.85rem;">No referring sites yet.</div>';
+    const camps = data.campaigns && data.campaigns.length
+        ? `<table class="traffic-table"><tbody>${data.campaigns.map(c =>
+            `<tr><td class="mono">${ea(c.tags)}</td><td class="num-col">${fmtNum(c.views)}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="muted" style="font-size:0.85rem;">None yet. Add <span class="mono">?utm_source=instagram&amp;utm_campaign=open-campus</span> to links you post to see them here.</div>';
+    return `<h3>How visitors arrived ${ea(scope || '')}</h3>${bars}${internalNote}
+        <p class="muted" style="font-size:0.75rem; margin-top:6px;">"Direct / unknown" includes links opened from apps that hide where they came from (often Instagram, LINE, Slack and email), as well as typed or bookmarked addresses.</p>
+        <div class="side-grid"><div><h3>Referring sites</h3>${refs}</div><div><h3>Tagged campaigns (UTM)</h3>${camps}</div></div>`;
+}
+
+function visitRowsHtml(items, showPage = true) {
+    return items.map(v => {
+        const whoLink = v.user
+            ? `<span class="linkish" data-user="${ea(v.user.user_id)}" data-label="${ea(v.user.name || v.user.email || '')}">${whoLabel(v.user)}</span>${v.identified_by === 'visitor' ? ' <span title="Signed in on another visit from this browser" style="color:#888;font-size:0.75rem;">(same browser)</span>' : ''}`
+            : `<span class="linkish" data-visitor="${ea(v.visitor_id)}" data-label="visitor ${ea(v.visitor_id.slice(0, 8))}">${whoLabel(null, v.visitor_id)}</span>`;
+        const utm = v.utm ? Object.entries(v.utm).map(([k, val]) => `${k}=${val}`).join(' ') : '';
+        const source = v.channel === 'internal'
+            ? '<span class="muted">within the site</span>'
+            : `${ea(v.channel_label || '—')}${v.referrer_host ? `<div class="page-url" title="${ea(v.referrer || '')}">${ea(v.referrer_host)}</div>` : ''}`;
+        return `<tr>
+            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(v.timestamp)}</td>
+            <td style="font-size:0.8rem;">${whoLink}<div class="page-url" title="${ea(v.user_agent || '')}">${ea(v.ip_address || '')}${v.timezone ? ' · ' + ea(v.timezone) : ''}</div></td>
+            ${showPage ? `<td><a class="page-title page-link" style="font-size:0.85rem;" href="${ea(pageHref(v.site, v.path))}">${ea(v.title || v.path)}</a>
+                <div class="page-url"><a href="${ea(v.url)}" target="_blank" rel="noopener">${ea(v.host + v.path)} ↗</a></div></td>` : ''}
+            <td style="font-size:0.8rem;">${source}${utm ? `<div class="page-url">${ea(utm)}</div>` : ''}</td>
+            <td style="font-size:0.8rem;">${ea([v.device, v.browser, v.os].filter(Boolean).join(' · '))}</td>
+            <td class="num-col" style="font-size:0.8rem;">${fmtDuration(v.duration_ms)}${v.scroll_pct !== null && v.scroll_pct !== undefined ? `<div class="page-url">${v.scroll_pct}% scrolled</div>` : ''}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ── One site ──
+
+async function loadSiteView(site) {
+    const d = await api.getTraffic('site', { ...trafficParams(), site });
+    setCrumbs([['All traffic', '#traffic'], [d.label]]);
+    document.getElementById('trafficHeading').innerHTML =
+        `${ea(d.label)}${d.url ? ` <a class="ext" href="${ea(d.url)}" target="_blank" rel="noopener">↗</a>` : ''}`;
+    renderTrafficStats(d.totals, d.daily, ['Avg time on page', fmtDuration(d.totals.avg_duration_ms)]);
+
+    const sections = d.groups.length
+        ? `<table class="traffic-table"><thead><tr><th>Section / page</th><th class="num-col">Views</th><th class="num-col">Visitors</th><th class="num-col">Identified</th><th class="num-col">Avg time</th><th>Last view</th></tr></thead><tbody>
+            ${d.groups.map((g, gi) => {
+                const single = g.pages.length === 1 && g.pages[0].path === g.group;
+                if (single) {
+                    const p = g.pages[0];
+                    return `<tr>${pageTitleCell(p)}<td class="num-col">${fmtNum(p.views)}</td><td class="num-col">${fmtNum(p.visitors)}</td>
+                        <td class="num-col">${p.identified ? fmtNum(p.identified) : '—'}</td><td class="num-col">${fmtDuration(p.avg_duration_ms)}</td>
+                        <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(p.last_seen)}</td></tr>`;
+                }
+                return `<tr class="group-row" onclick="document.querySelectorAll('.grp-${gi}').forEach(r => r.classList.toggle('hidden')); this.classList.toggle('open');">
+                        <td><span class="caret">▸</span> <span class="mono">${ea(g.group)}</span> <span class="muted" style="font-size:0.8rem;">${g.pages.length} pages</span></td>
+                        <td class="num-col">${fmtNum(g.views)}</td><td class="num-col">${fmtNum(g.visitors)}</td><td></td><td></td><td></td></tr>` +
+                    g.pages.map(p => `<tr class="grp-${gi} hidden sub-row">${pageTitleCell(p)}<td class="num-col">${fmtNum(p.views)}</td>
+                        <td class="num-col">${fmtNum(p.visitors)}</td><td class="num-col">${p.identified ? fmtNum(p.identified) : '—'}</td>
+                        <td class="num-col">${fmtDuration(p.avg_duration_ms)}</td><td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(p.last_seen)}</td></tr>`).join('');
+            }).join('')}</tbody></table>`
+        : '<div class="muted" style="font-size:0.85rem;">No page views in this period.</div>';
+
+    document.getElementById('trafficDetail').innerHTML = `
+        <h3>Pages</h3><p class="muted" style="font-size:0.8rem; margin-bottom:8px;">Sections roll up their pages; click one to expand. Visitors in a section are counted once however many of its pages they saw.</p>
+        <div class="table-wrap">${sections}</div>
+        <div style="margin-top:24px;">${sourcesHtml(d, 'at this site')}</div>
+        <h3>Recent visits</h3>${detailVisitsShell()}`;
+    detailOffset = 0;
+    await loadDetailVisits({ site }, true);
+}
+
+// ── One page ──
+
+async function loadPageView(site, path) {
+    const d = await api.getTraffic('page', { ...trafficParams(), site, path });
+    setCrumbs([['All traffic', '#traffic'], [d.site_label, siteHref(site)], [path]]);
+    document.getElementById('trafficHeading').innerHTML =
+        `${ea(d.title || path)}${d.url ? ` <a class="ext" href="${ea(d.url)}" target="_blank" rel="noopener">↗</a>` : ''}`;
+    renderTrafficStats(d.totals, d.daily, ['Avg time · scroll',
+        `${fmtDuration(d.totals.avg_duration_ms)}${d.avg_scroll_pct !== null ? ` · ${d.avg_scroll_pct}%` : ''}`]);
+    document.getElementById('trafficDetail').innerHTML = `
+        <p class="page-url" style="margin-bottom:16px;">${d.url ? `<a href="${ea(d.url)}" target="_blank" rel="noopener">${ea(d.url)}</a>` : ea(path)}</p>
+        ${sourcesHtml(d, 'at this page')}
+        <h3>Visits to this page</h3>${detailVisitsShell(false)}`;
+    detailOffset = 0;
+    await loadDetailVisits({ site, path_exact: path }, false);
+}
+
+function detailVisitsShell(showPage = true) {
+    return `<div class="table-wrap"><table class="traffic-table">
+        <thead><tr><th>Time</th><th>Who</th>${showPage ? '<th>Page</th>' : ''}<th>Source</th><th>Device</th><th class="num-col">Time on page</th></tr></thead>
+        <tbody id="detailVisitsBody"></tbody></table></div>
+        <div id="detailVisitsPagination" style="margin-top:16px; text-align:center;"></div>`;
+}
+
+let detailFilter = null;
+async function loadDetailVisits(filter, showPage) {
+    if (filter) detailFilter = { filter, showPage };
+    const { filter: f, showPage: sp } = detailFilter;
+    const data = await api.getTraffic('views', { ...trafficParams(), ...f, limit: TRAFFIC_LIMIT, offset: detailOffset });
+    const tbody = document.getElementById('detailVisitsBody');
+    if (!tbody) return;
+    if (detailOffset === 0) tbody.innerHTML = '';
+    tbody.innerHTML += visitRowsHtml(data.items, sp);
+    const loaded = detailOffset + data.items.length;
+    document.getElementById('detailVisitsPagination').innerHTML = loaded < data.total
+        ? `<button class="btn-secondary btn-small" onclick="detailOffset=${loaded};loadDetailVisits()">Load more (${loaded}/${data.total})</button>`
+        : `<span style="font-size:0.8rem;color:#888;">${fmtNum(data.total)} views</span>`;
+}
+
+// ── Overview: filters, tabs, visits, visitors ──
 
 function populateVisitFilters(s) {
     const catSel = document.getElementById('visitsCategory');
     const siteSel = document.getElementById('visitsSite');
-    const keepCat = catSel.value, keepSite = siteSel.value;
+    const chSel = document.getElementById('visitsChannel');
+    const keepCat = catSel.value, keepSite = siteSel.value, keepCh = chSel.value;
     catSel.innerHTML = '<option value="">All categories</option>' +
         s.categories.map(c => `<option value="${ea(c.category)}">${ea(c.label)}</option>`).join('');
     const sites = {};
@@ -1383,13 +1564,17 @@ function populateVisitFilters(s) {
     siteSel.innerHTML = '<option value="">All sites</option>' +
         Object.entries(sites).sort((a, b) => a[1].localeCompare(b[1]))
             .map(([k, label]) => `<option value="${ea(k)}">${ea(label)}</option>`).join('');
+    chSel.innerHTML = '<option value="">All sources</option>' +
+        s.channels.map(c => `<option value="${ea(c.channel)}">${ea(c.label)}</option>`).join('');
     catSel.value = keepCat;
     siteSel.value = sites[keepSite] ? keepSite : '';
+    chSel.value = keepCh;
 }
 
 function showTrafficTab(tab) {
     trafficTab = tab;
-    ['pages', 'visits', 'visitors'].forEach(t => {
+    if (trafficRoute().view !== 'overview') { location.hash = '#traffic'; return; }
+    ['pages', 'sources', 'visits', 'visitors'].forEach(t => {
         const key = t.charAt(0).toUpperCase() + t.slice(1);
         document.getElementById('trafficPane' + key).classList.toggle('hidden', t !== tab);
         document.getElementById('trafficTab' + key).classList.toggle('active', t === tab);
@@ -1410,6 +1595,16 @@ function filterVisitsByVisitor(visitorId, label) {
     showTrafficTab('visits');
 }
 
+function filterVisitsByChannel(channel) {
+    const r = trafficRoute();
+    document.getElementById('visitsChannel').value = channel;
+    document.getElementById('visitsSite').value = r.view === 'overview' ? '' : r.site;
+    visitsUser = null;
+    visitsVisitor = null;
+    if (r.view === 'overview') showTrafficTab('visits');
+    else { trafficTab = 'visits'; location.hash = '#traffic'; }
+}
+
 function clearVisitsFilter() {
     visitsUser = null;
     visitsVisitor = null;
@@ -1420,7 +1615,8 @@ async function loadVisits(append = false) {
     if (!append) visitsOffset = 0;
     const params = { ...trafficParams(), limit: TRAFFIC_LIMIT, offset: visitsOffset,
         category: document.getElementById('visitsCategory').value,
-        site: document.getElementById('visitsSite').value };
+        site: document.getElementById('visitsSite').value,
+        channel: document.getElementById('visitsChannel').value };
     if (visitsUser) params.user_id = visitsUser.id;
     if (visitsVisitor) params.visitor_id = visitsVisitor.id;
     const who = visitsUser || visitsVisitor;
@@ -1436,22 +1632,7 @@ async function loadVisits(append = false) {
     }
     const tbody = document.getElementById('visitsBody');
     if (!append) tbody.innerHTML = '';
-    tbody.innerHTML += data.items.map(v => {
-        const whoLink = v.user
-            ? `<span class="linkish" data-user="${ea(v.user.user_id)}" data-label="${ea(v.user.name || v.user.email || '')}">${whoLabel(v.user)}</span>${v.identified_by === 'visitor' ? ' <span title="Signed in on another visit from this browser" style="color:#888;font-size:0.75rem;">(same browser)</span>' : ''}`
-            : `<span class="linkish" data-visitor="${ea(v.visitor_id)}" data-label="visitor ${ea(v.visitor_id.slice(0, 8))}">${whoLabel(null, v.visitor_id)}</span>`;
-        const ref = v.referrer ? (() => { try { return new URL(v.referrer).hostname; } catch { return v.referrer; } })() : '';
-        const utm = v.utm ? Object.entries(v.utm).map(([k, val]) => `${k}=${val}`).join(' ') : '';
-        return `<tr>
-            <td style="font-size:0.8rem; white-space:nowrap;">${fmtTime(v.timestamp)}</td>
-            <td style="font-size:0.8rem;">${whoLink}<div class="page-url" title="${ea(v.user_agent || '')}">${ea(v.ip_address || '')}${v.timezone ? ' · ' + ea(v.timezone) : ''}</div></td>
-            <td><div class="page-title" style="font-size:0.85rem;">${ea(v.title || v.path)}</div>
-                <div class="page-url"><a href="${ea(v.url)}" target="_blank" rel="noopener">${ea(v.host + v.path)}</a></div></td>
-            <td style="font-size:0.8rem;" title="${ea(v.referrer || '')}">${ea(ref) || '—'}${utm ? `<div class="page-url">${ea(utm)}</div>` : ''}</td>
-            <td style="font-size:0.8rem;">${ea([v.device, v.browser, v.os].filter(Boolean).join(' · '))}</td>
-            <td class="num-col" style="font-size:0.8rem;">${fmtDuration(v.duration_ms)}${v.scroll_pct !== null ? `<div class="page-url">${v.scroll_pct}% scrolled</div>` : ''}</td>
-        </tr>`;
-    }).join('');
+    tbody.innerHTML += visitRowsHtml(data.items);
     const loaded = visitsOffset + data.items.length;
     document.getElementById('visitsPagination').innerHTML = loaded < data.total
         ? `<button class="btn-secondary btn-small" onclick="visitsOffset=${loaded};loadVisits(true)">Load more (${loaded}/${data.total})</button>`
