@@ -352,6 +352,9 @@
     .filter-chip button { border:none; background:#c5cae9; color:#1a237e; border-radius:10px; padding:2px 8px; cursor:pointer; font-size:0.75rem; }
     .filter-chip button:hover { background:#9fa8da; }
     .section-name { color:#666; font-weight:normal; }
+    .pages-toggle > summary { cursor:pointer; font-size:0.85rem; color:#3949ab; padding:4px 0; user-select:none; }
+    .pages-toggle > summary:hover { text-decoration:underline; }
+    .pages-toggle[open] > summary { margin-bottom:8px; }
     @media (max-width: 700px) { .stat-row { grid-template-columns:repeat(2, 1fr); } .side-grid { grid-template-columns:1fr; } }
 
     /* ── Hidden ───────────────────────────────────────── */
@@ -1283,6 +1286,7 @@ const TRAFFIC_LIMIT = 50;
 const PAGES_SHOWN = 10;
 let trafficSummary = null;
 let trafficTab = 'pages';
+const openPageTables = new Set();  // categories whose page table is expanded
 let visitsOffset = 0;
 let visitorsOffset = 0;
 let detailOffset = 0;
@@ -1407,10 +1411,14 @@ function renderTrafficPages(s) {
         const more = cat.pages.length > PAGES_SHOWN
             ? `<div style="margin-top:8px;"><span class="linkish" style="font-size:0.8rem;" onclick="document.querySelectorAll('.more-${cat.category}').forEach(r => r.classList.remove('hidden')); this.remove();">Show all ${cat.pages.length} pages</span></div>`
             : '';
+        // Page tables start collapsed; an opened one stays open when the report reloads
         const body = cat.pages.length
-            ? `<div class="table-wrap"><table class="traffic-table">
+            ? `<details class="pages-toggle" data-cat="${ea(cat.category)}" ${openPageTables.has(cat.category) ? 'open' : ''}
+                    ontoggle="openPageTables[this.open ? 'add' : 'delete'](this.dataset.cat)">
+                <summary>${fmtNum(cat.pages.length)} page${cat.pages.length === 1 ? '' : 's'}</summary>
+                <div class="table-wrap"><table class="traffic-table">
                 <thead><tr><th>Page</th><th>Site</th><th class="num-col">Views</th><th class="num-col">Visitors</th><th class="num-col">Identified</th><th class="num-col">Avg time</th><th>Last view</th></tr></thead>
-                <tbody>${rows}</tbody></table></div>${more}`
+                <tbody>${rows}</tbody></table></div>${more}</details>`
             : '<div style="font-size:0.85rem; color:#888;">No page views in this period.</div>';
         return `<div class="cat-block">
             <div class="cat-head"><h3>${ea(cat.label)}</h3>
