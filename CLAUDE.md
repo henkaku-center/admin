@@ -36,7 +36,7 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 | Users | Admins only | List all users with roles and last login |
 | Invites | Admins only | Create and view invite codes |
 | Activity | Admins only | Activity log — logins, entity views, writes (filterable by user, method, path) |
-| Traffic | Admins only | Website traffic across every site: totals, views per day, pages grouped by category (institutional, courses, projects, individuals, platform), recent visits and visitors with identity. Page data comes from an unauthenticated beacon, so render it with `ea()` (attribute-safe), never `esc()` |
+| Traffic | Content managers and admins | Website traffic across every site: totals, views per day, pages grouped by category (institutional, courses, projects, individuals, platform; a site row names its subsection, e.g. "Henkaku Center website: activity pages", and opens `#traffic/site/<site>/<category>`), recent visits and visitors with identity. Page data comes from an unauthenticated beacon, so render it with `ea()` (attribute-safe), never `esc()` |
 
 ### Registry endpoints used
 
