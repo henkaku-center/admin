@@ -580,7 +580,7 @@
     </div>
   </div>
 
-  <!-- Traffic page (admin only). Sub-routes: #traffic, #traffic/site/<site>, #traffic/page/<site>/<path> -->
+  <!-- Traffic page (content managers and admins). Sub-routes: #traffic, #traffic/site/<site>, #traffic/page/<site>/<path> -->
   <div id="pageTraffic" class="container hidden">
     <div class="section">
       <div id="trafficCrumbs" class="crumbs"></div>
@@ -800,13 +800,18 @@ async function bootstrap() {
     document.getElementById('navUsers').classList.toggle('hidden', !canInvite());
     document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
     document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
-    document.getElementById('navTraffic').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navTraffic').classList.toggle('hidden', !canSeeTraffic());
 
     populateProfile();
     route();
 }
 
 // ── Routing ─────────────────────────────────────────
+
+// Traffic reports are open to content managers and admins (Registry: require_role("content_manager"))
+function canSeeTraffic() {
+    return !!currentUser && (currentUser.role === 'admin' || currentUser.role === 'content_manager');
+}
 
 function route() {
     // Sub-routes (#traffic/site/sds) select their tab by the first segment
@@ -840,7 +845,7 @@ function route() {
             }
             break;
         case 'traffic':
-            if (isAdmin) {
+            if (canSeeTraffic()) {
                 document.getElementById('pageTraffic').classList.remove('hidden');
                 loadTraffic();
             } else {
@@ -1254,7 +1259,7 @@ function renderActivity(items, total, append) {
     }
 }
 
-// ── Website traffic (admin) ─────────────────────────
+// ── Website traffic (content manager+) ─────────────────────────
 // Routes: #traffic (overview), #traffic/site/<site>, #traffic/page/<site>/<encoded path>
 
 // Attribute-safe escaping: page views arrive from an unauthenticated beacon, so titles,
@@ -1696,7 +1701,7 @@ async function forceChangePassword(e) {
         document.getElementById('navUsers').classList.toggle('hidden', !canInvite());
         document.getElementById('navInvites').classList.toggle('hidden', !isAdmin);
         document.getElementById('navActivity').classList.toggle('hidden', !isAdmin);
-    document.getElementById('navTraffic').classList.toggle('hidden', !isAdmin);
+    document.getElementById('navTraffic').classList.toggle('hidden', !canSeeTraffic());
         populateProfile();
         route();
     } catch (err) {

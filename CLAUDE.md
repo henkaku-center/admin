@@ -50,7 +50,7 @@ The admin portal authenticates against the **Registry API** (`https://registry.h
 | `/api/v1/auth/users` | GET | List all users (admin) |
 | `/api/v1/auth/invite-codes` | GET/POST | List/create invite codes (admin) |
 | `/api/v1/activity` | GET | Activity log with filters (admin) |
-| `/api/v1/traffic/summary`, `/views`, `/visitors` | GET | Website traffic reports (admin) |
+| `/api/v1/traffic/summary`, `/views`, `/visitors` | GET | Website traffic reports (content_manager+) |
 | `/api/v1/auth/invitations` | POST | Invite a user (Users page; content managers see only this form) |
 | `/api/v1/auth/users/{id}/invitation` | POST | Resend invite (never-signed-in users) |
 | `/api/v1/auth/users/{id}/password-reset` | POST | Email a reset link (admin) |
